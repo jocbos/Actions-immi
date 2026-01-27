@@ -64,10 +64,10 @@ jobs:
       run: |
         git clone --depth 1 "$REPO_URL" -b "$REPO_BRANCH" openwrt
         if [ -n "$GITHUB_OUTPUT" ]; then
-      echo "status=success" >> "$GITHUB_OUTPUT"
-      else
-      echo "::set-output name=status::success"
-      fi
+        echo "status=success" >> "$GITHUB_OUTPUT"
+        else
+        echo "::set-output name=status::success"
+        fi
        
     - name: Free up disk space
       run: |
