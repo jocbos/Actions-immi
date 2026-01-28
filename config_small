@@ -82,10 +82,9 @@ CONFIG_DEFAULT_ca-bundle=y
 CONFIG_DEFAULT_dnsmasq-full=y
 CONFIG_DEFAULT_dropbear=y
 CONFIG_DEFAULT_e2fsprogs=y
-CONFIG_DEFAULT_firewall4=y
+CONFIG_DEFAULT_firewall=y
 CONFIG_DEFAULT_fstools=y
 CONFIG_DEFAULT_kmod-bam-dmux=y
-CONFIG_DEFAULT_kmod-nft-offload=y
 CONFIG_DEFAULT_kmod-qcom-rproc-modem=y
 CONFIG_DEFAULT_kmod-rpmsg-wwan-ctrl=y
 CONFIG_DEFAULT_kmod-rproc-wcnss=y
@@ -99,7 +98,6 @@ CONFIG_DEFAULT_logd=y
 CONFIG_DEFAULT_mkf2fs=y
 CONFIG_DEFAULT_mtd=y
 CONFIG_DEFAULT_netifd=y
-CONFIG_DEFAULT_nftables=y
 CONFIG_DEFAULT_odhcp6c=y
 CONFIG_DEFAULT_odhcpd-ipv6only=y
 CONFIG_DEFAULT_openstick-tweaks=y
@@ -1702,8 +1700,8 @@ CONFIG_DROPBEAR_SK_ED25519=y
 # end of Encryption options
 
 # CONFIG_PACKAGE_ead is not set
-CONFIG_PACKAGE_firewall=m
-CONFIG_PACKAGE_firewall4=y
+CONFIG_PACKAGE_firewall=y
+# CONFIG_PACKAGE_firewall4 is not set
 CONFIG_PACKAGE_fstools=y
 # CONFIG_FSTOOLS_OVL_MOUNT_FULL_ACCESS_TIME is not set
 # CONFIG_FSTOOLS_OVL_MOUNT_COMPRESS_ZLIB is not set
@@ -1839,9 +1837,9 @@ CONFIG_NETJSON_MONITORING_IWINFO=y
 # CONFIG_PACKAGE_qbee-agent is not set
 # CONFIG_PACKAGE_rsyslog is not set
 # CONFIG_PACKAGE_schroot is not set
-CONFIG_PACKAGE_docker=y
-CONFIG_PACKAGE_docker-compose=y
-CONFIG_PACKAGE_dockerd=y
+# CONFIG_PACKAGE_docker is not set
+# CONFIG_PACKAGE_docker-compose is not set
+# CONFIG_PACKAGE_dockerd is not set
 #
 # Configuration
 #
@@ -2322,13 +2320,13 @@ CONFIG_PACKAGE_kmod-crypto-user=y
 # CONFIG_PACKAGE_kmod-fs-9p is not set
 # CONFIG_PACKAGE_kmod-fs-afs is not set
 # CONFIG_PACKAGE_kmod-fs-autofs4 is not set
-# CONFIG_PACKAGE_kmod-fs-btrfs is not set
+CONFIG_PACKAGE_kmod-fs-btrfs=y
 # CONFIG_PACKAGE_kmod-fs-cifs is not set
 CONFIG_PACKAGE_kmod-fs-configfs=y
 # CONFIG_PACKAGE_kmod-fs-cramfs is not set
 # CONFIG_PACKAGE_kmod-fs-exfat is not set
 # CONFIG_PACKAGE_kmod-fs-exportfs is not set
-# CONFIG_PACKAGE_kmod-fs-ext4 is not set
+CONFIG_PACKAGE_kmod-fs-ext4=y
 # CONFIG_PACKAGE_kmod-fs-f2fs is not set
 # CONFIG_PACKAGE_kmod-fs-hfs is not set
 # CONFIG_PACKAGE_kmod-fs-hfsplus is not set
@@ -2354,6 +2352,7 @@ CONFIG_PACKAGE_kmod-fs-configfs=y
 # CONFIG_PACKAGE_kmod-fuse is not set
 # CONFIG_PACKAGE_kmod-pstore is not set
 CONFIG_PACKAGE_kmod-overlay=y
+CONFIG_PACKAGE_kmod-fs-overlay=y
 # end of Filesystems
 
 #
@@ -2643,7 +2642,7 @@ CONFIG_PACKAGE_kmod-ipt-nat6=y
 # CONFIG_PACKAGE_kmod-netatop is not set
 CONFIG_PACKAGE_kmod-nf-conntrack=y
 CONFIG_PACKAGE_kmod-nf-conntrack-netlink=y
-CONFIG_PACKAGE_kmod-nf-conntrack6=y
+# CONFIG_PACKAGE_kmod-nf-conntrack6 is not set
 CONFIG_PACKAGE_kmod-nf-flow=y
 CONFIG_PACKAGE_kmod-nf-ipt=y
 CONFIG_PACKAGE_kmod-nf-ipt6=y
@@ -2666,18 +2665,18 @@ CONFIG_PACKAGE_kmod-nfnetlink=y
 # CONFIG_PACKAGE_kmod-nfnetlink-queue is not set
 # CONFIG_PACKAGE_kmod-nft-arp is not set
 # CONFIG_PACKAGE_kmod-nft-bridge is not set
-CONFIG_PACKAGE_kmod-nft-compat=y
+# CONFIG_PACKAGE_kmod-nft-compat is not set
 # CONFIG_PACKAGE_kmod-nft-connlimit is not set
-CONFIG_PACKAGE_kmod-nft-core=y
+# CONFIG_PACKAGE_kmod-nft-core is not set
 # CONFIG_PACKAGE_kmod-nft-dup-inet is not set
-CONFIG_PACKAGE_kmod-nft-fib=y
-CONFIG_PACKAGE_kmod-nft-fullcone=y
-CONFIG_PACKAGE_kmod-nft-nat=y
+# CONFIG_PACKAGE_kmod-nft-fib is not set
+# CONFIG_PACKAGE_kmod-nft-fullcone is not set
+# CONFIG_PACKAGE_kmod-nft-nat is not set
 # CONFIG_PACKAGE_kmod-nft-netdev is not set
-CONFIG_PACKAGE_kmod-nft-offload=y
+# CONFIG_PACKAGE_kmod-nft-offload is not set
 # CONFIG_PACKAGE_kmod-nft-queue is not set
 # CONFIG_PACKAGE_kmod-nft-socket is not set
-CONFIG_PACKAGE_kmod-nft-tproxy=y
+# CONFIG_PACKAGE_kmod-nft-tproxy is not set
 # CONFIG_PACKAGE_kmod-nft-xfrm is not set
 # CONFIG_PACKAGE_kmod-oaf is not set
 # end of Netfilter Extensions
@@ -3866,7 +3865,7 @@ CONFIG_PACKAGE_libattr=y
 CONFIG_PACKAGE_libip4tc=y
 CONFIG_PACKAGE_libip6tc=y
 CONFIG_PACKAGE_libiptext=y
-CONFIG_PACKAGE_libiptext-nft=y
+# CONFIG_PACKAGE_libiptext-nft is not set
 CONFIG_PACKAGE_libiptext6=y
 CONFIG_PACKAGE_libxtables=y
 # CONFIG_IPTABLES_CONNLABEL is not set
@@ -5136,8 +5135,8 @@ CONFIG_PACKAGE_luci-app-cpu-perf=y
 # CONFIG_PACKAGE_luci-app-ddns is not set
 # CONFIG_PACKAGE_luci-app-ddns-go is not set
 # CONFIG_PACKAGE_luci-app-diskman is not set
-CONFIG_PACKAGE_luci-app-docker=y
-CONFIG_PACKAGE_luci-app-dockerman=y
+# CONFIG_PACKAGE_luci-app-docker is not set
+# CONFIG_PACKAGE_luci-app-dockerman is not set
 # CONFIG_PACKAGE_luci-app-dufs is not set
 # CONFIG_PACKAGE_luci-app-dump1090 is not set
 # CONFIG_PACKAGE_luci-app-email is not set
@@ -5613,9 +5612,9 @@ CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
 # CONFIG_PACKAGE_spamc is not set
 # CONFIG_PACKAGE_spamc-ssl is not set
 # end of Mail
-CONFIG_PACKAGE_luci-app-dockerman=y
-CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn=y
-CONFIG_PACKAGE_luci-lib-docker=y
+# CONFIG_PACKAGE_luci-app-dockerman is not set
+# CONFIG_PACKAGE_luci-i18n-dockerman-zh-cn is not set
+# CONFIG_PACKAGE_luci-lib-docker is not set
 #
 # Multimedia
 #
@@ -5779,27 +5778,27 @@ CONFIG_PACKAGE_curl=y
 # Firewall
 #
 CONFIG_PACKAGE_arptables-legacy=y
-CONFIG_PACKAGE_arptables-nft=y
+# CONFIG_PACKAGE_arptables-nft is not set
 # CONFIG_PACKAGE_conntrack is not set
 # CONFIG_PACKAGE_conntrackd is not set
 CONFIG_PACKAGE_ebtables-legacy=y
-CONFIG_PACKAGE_ebtables-nft=y
+# CONFIG_PACKAGE_ebtables-nft is not set
 # CONFIG_PACKAGE_fwknop is not set
 # CONFIG_PACKAGE_fwknopd is not set
 CONFIG_PACKAGE_ip6tables-extra=y
 # CONFIG_PACKAGE_ip6tables-mod-fullconenat is not set
 CONFIG_PACKAGE_ip6tables-mod-nat=y
-CONFIG_PACKAGE_ip6tables-nft=y
+# CONFIG_PACKAGE_ip6tables-nft is not set
 CONFIG_PACKAGE_ip6tables-zz-legacy=y
 # CONFIG_PACKAGE_iptables-mod-checksum is not set
 # CONFIG_PACKAGE_iptables-mod-cluster is not set
-# CONFIG_PACKAGE_iptables-mod-conntrack-extra is not set
+CONFIG_PACKAGE_iptables-mod-conntrack-extra=y
 CONFIG_PACKAGE_iptables-mod-extra=y
 CONFIG_PACKAGE_iptables-mod-filter=y
 # CONFIG_PACKAGE_iptables-mod-fullconenat is not set
 # CONFIG_PACKAGE_iptables-mod-hashlimit is not set
 CONFIG_PACKAGE_iptables-mod-ipopt=y
-# CONFIG_PACKAGE_iptables-mod-iprange is not set
+CONFIG_PACKAGE_iptables-mod-iprange=y
 # CONFIG_PACKAGE_iptables-mod-ipsec is not set
 # CONFIG_PACKAGE_iptables-mod-led is not set
 CONFIG_PACKAGE_iptables-mod-nat-extra=y
@@ -5809,7 +5808,7 @@ CONFIG_PACKAGE_iptables-mod-nat-extra=y
 # CONFIG_PACKAGE_iptables-mod-rpfilter is not set
 # CONFIG_PACKAGE_iptables-mod-rtpengine is not set
 # CONFIG_PACKAGE_iptables-mod-socket is not set
-CONFIG_PACKAGE_iptables-nft=y
+# CONFIG_PACKAGE_iptables-nft is not set
 CONFIG_PACKAGE_iptables-zz-legacy=y
 # CONFIG_PACKAGE_iptables-mod-tee is not set
 # CONFIG_PACKAGE_iptables-mod-tproxy is not set
@@ -5832,7 +5831,7 @@ CONFIG_PACKAGE_iptables-zz-legacy=y
 # CONFIG_PACKAGE_miniupnpd-iptables is not set
 # CONFIG_PACKAGE_miniupnpd-nftables is not set
 # CONFIG_PACKAGE_natpmpc is not set
-CONFIG_PACKAGE_nftables-json=y
+# CONFIG_PACKAGE_nftables-json is not set
 # CONFIG_PACKAGE_nftables-nojson is not set
 # CONFIG_PACKAGE_openappid is not set
 # CONFIG_PACKAGE_shorewall is not set
@@ -5842,7 +5841,7 @@ CONFIG_PACKAGE_nftables-json=y
 # CONFIG_PACKAGE_shorewall6-lite is not set
 # CONFIG_PACKAGE_snort3 is not set
 CONFIG_PACKAGE_xtables-legacy=y
-CONFIG_PACKAGE_xtables-nft=y
+# CONFIG_PACKAGE_xtables-nft is not set
 # end of Firewall
 
 #
@@ -7492,9 +7491,9 @@ CONFIG_PACKAGE_dbus=y
 # CONFIG_PACKAGE_digitemp is not set
 # CONFIG_PACKAGE_digitemp-usb is not set
 # CONFIG_PACKAGE_dmesg is not set
-CONFIG_PACKAGE_docker=y
-CONFIG_PACKAGE_docker-compose=y
-CONFIG_PACKAGE_dockerd=y
+# CONFIG_PACKAGE_docker is not set
+# CONFIG_PACKAGE_docker-compose is not set
+# CONFIG_PACKAGE_dockerd is not set
 # CONFIG_PACKAGE_domoticz is not set
 # CONFIG_PACKAGE_dos2unix is not set
 # CONFIG_PACKAGE_dropbearconvert is not set
