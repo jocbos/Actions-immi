@@ -87,7 +87,7 @@ jobs:
       run: |
         cp -r files openwrt/files
         if [ -n "$CONFIG_FILE" ] && [ -e "$CONFIG_FILE" ]; then
-        mv "$CONFIG_FILE" openwrt/.config
+          mv "$CONFIG_FILE" openwrt/.config
         fi
     
         cd openwrt
