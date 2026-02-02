@@ -37,6 +37,8 @@
 # istore
 echo >> feeds.conf.default
 echo 'src-git istore https://github.com/linkease/istore;main' >> feeds.conf.default
+
+echo >> feeds.conf.default
 echo 'src-git cpu-perf https://github.com/gSpotx2f/luci-app-cpu-perf.git;master' >> feeds.conf.default
 echo 'src-git cpu-status https://github.com/gSpotx2f/luci-app-cpu-status.git;master' >> feeds.conf.default
 echo 'src-git temp-status https://github.com/gSpotx2f/luci-app-temp-status.git;master' >> feeds.conf.default
