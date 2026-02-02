@@ -22,10 +22,10 @@
 # echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
 
 #temp
-git clone https://github.com/gSpotx2f/luci-app-cpu-perf package/luci-app-cpu-perf
-git clone https://github.com/gSpotx2f/luci-app-cpu-status package/luci-app-cpu-status
-git clone https://github.com/gSpotx2f/luci-app-temp-status package/luci-app-temp-status
-git clone https://github.com/lkiuyu/DbusSmsForwardCPlus package/DbusSmsForwardCPlus
+# git clone https://github.com/gSpotx2f/luci-app-cpu-perf package/luci-app-cpu-perf
+# git clone https://github.com/gSpotx2f/luci-app-cpu-status package/luci-app-cpu-status
+# git clone https://github.com/gSpotx2f/luci-app-temp-status package/luci-app-temp-status
+# git clone https://github.com/lkiuyu/DbusSmsForwardCPlus package/DbusSmsForwardCPlus
 
 # turboacc
 # curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
@@ -37,3 +37,8 @@ git clone https://github.com/lkiuyu/DbusSmsForwardCPlus package/DbusSmsForwardCP
 # istore
 echo >> feeds.conf.default
 echo 'src-git istore https://github.com/linkease/istore;main' >> feeds.conf.default
+echo 'src-git cpu-perf https://github.com/gSpotx2f/luci-app-cpu-perf.git;master' >> feeds.conf.default
+echo 'src-git cpu-status https://github.com/gSpotx2f/luci-app-cpu-status.git;master' >> feeds.conf.default
+echo 'src-git temp-status https://github.com/gSpotx2f/luci-app-temp-status.git;master' >> feeds.conf.default
+echo 'src-git dbussmsforward https://github.com/lkiuyu/DbusSmsForwardCPlus.git;master' >> feeds.conf.default
+
