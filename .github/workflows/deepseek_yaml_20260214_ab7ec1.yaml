@@ -1,0 +1,368 @@
+name: Build HomeProxy Firmware for XG-040G-MD (优化版)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: '🔧 SSH连接调试模式'
+        required: false
+        default: false
+        type: boolean
+      log_switch:
+        description: '📝 详细编译日志'
+        required: false
+        default: false
+        type: boolean
+      clean_build:
+        description: '🧹 清理编译（不使用缓存）'
+        required: false
+        default: false
+        type: boolean
+      minimal_build:
+        description: '⚡ 最小化编译（跳过大型包）'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CONFIG_FILE: 'config/040new.config'
+  REPO_URL: https://github.com/bingoguo93/immortalwrt
+  REPO_BRANCH: openwrt-25.12
+  FEEDS_CONF: feeds.conf.default
+  DIY_P4_SH: diy-part4-homeproxy.sh
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6小时超时
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+
+    - name: Show system info
+      run: |
+        echo "=== 系统信息 ==="
+        echo "CPU: $(nproc) 核心"
+        echo "内存:"
+        free -h
+        echo "磁盘:"
+        df -h
+        echo "系统版本:"
+        cat /etc/os-release
+
+    - name: Free disk space aggressively
+      run: |
+        echo "=== 清理前磁盘空间 ==="
+        df -h
+        
+        # 清理不必要的软件包
+        sudo apt-get clean
+        sudo apt-get autoremove -y
+        
+        # 清理 Docker 镜像
+        docker system prune -a -f || true
+        
+        # 清理临时文件
+        sudo rm -rf /tmp/*
+        sudo rm -rf /var/tmp/*
+        
+        # 清理大文件
+        sudo rm -rf /opt/hostedtoolcache
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/dotnet
+        
+        echo "=== 清理后磁盘空间 ==="
+        df -h
+
+    - name: Create swap space
+      run: |
+        echo "=== 创建交换空间 ==="
+        # 创建 3GB 交换文件
+        sudo fallocate -l 3G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        echo "交换空间状态："
+        sudo swapon --show
+        free -h
+
+    - name: Setup ccache with optimization
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: openwrt-homeproxy-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+        restore-keys: |
+          openwrt-homeproxy-${{ env.REPO_BRANCH }}-
+          openwrt-homeproxy-
+        max-size: 5G
+        # 如果选择清理编译，则不用缓存
+        variant: ${{ inputs.clean_build && 'none' || 'ccache' }}
+
+    - name: Initialization environment
+      id: init
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        echo "=== 安装编译依赖 ==="
+        sudo -E apt-get -y update
+        
+        # 安装基础依赖
+        sudo -E apt-get -y install build-essential clang flex bison g++ gawk \
+        gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+        python3-distutils python3-setuptools rsync unzip zlib1g-dev file wget
+        
+        # 安装特定依赖
+        sudo -E apt-get -y install $(curl -fsSL https://raw.githubusercontent.com/xuxin1955/depend_ubuntu2204_openwrt/refs/heads/main/depend_ubuntu2204_openwrt)
+        
+        # 安装 mkbootimg
+        wget https://raw.githubusercontent.com/xuxin1955/depend_ubuntu2204_openwrt/main/mkbootimg_10.0.0+r36-9_all.deb
+        sudo dpkg -i mkbootimg_10.0.0+r36-9_all.deb || true
+        sudo apt-get install -f -y
+        
+        sudo timedatectl set-timezone "${TZ}"
+        echo "status=success" >> ${GITHUB_OUTPUT}
+        
+        # 验证 ccache
+        ccache -s
+
+    - name: Clone source code
+      if: steps.init.outputs.status == 'success'
+      run: |
+        echo "=== 克隆源码 ==="
+        if [ "${{ inputs.clean_build }}" == "true" ]; then
+          git clone "$REPO_URL" -b "$REPO_BRANCH" openwrt
+        else
+          git clone --depth 1 "$REPO_URL" -b "$REPO_BRANCH" openwrt
+        fi
+
+    - name: Setup build directories
+      run: |
+        echo "=== 设置编译目录 ==="
+        sudo mkdir -p /mnt/openwrt/{dl,staging_dir,build_dir,ccache}
+        sudo chown -R $USER:$GROUPS /mnt/openwrt
+        
+        # 创建软链接
+        ln -sfn /mnt/openwrt/dl openwrt/dl
+        ln -sfn /mnt/openwrt/staging_dir openwrt/staging_dir
+        ln -sfn /mnt/openwrt/build_dir openwrt/build_dir
+        
+        # 设置 ccache 目录
+        export CCACHE_DIR=/mnt/openwrt/ccache
+        echo "CCACHE_DIR=/mnt/openwrt/ccache" >> $GITHUB_ENV
+        
+        df -h
+
+    - name: Load custom feeds
+      run: |
+        echo "=== 加载自定义 feeds ==="
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P4_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P4_SH
+
+    - name: Update & Install feeds
+      working-directory: ./openwrt
+      run: |
+        echo "=== 更新 feeds ==="
+        ./scripts/feeds update -a
+        echo "=== 安装 feeds ==="
+        ./scripts/feeds install -a -f
+
+    - name: Configuration Customization
+      run: |
+        echo "=== 配置定制 ==="
+        cp -fv "${CONFIG_FILE}" openwrt/.config
+        
+        # 如果选择最小化编译，注释掉大型包
+        if [ "${{ inputs.minimal_build }}" == "true" ]; then
+          echo ">>> 最小化编译模式：注释大型软件包"
+          sed -i 's/^CONFIG_PACKAGE_luci-app-qbittorrent=y/# CONFIG_PACKAGE_luci-app-qbittorrent is not set/' openwrt/.config
+          sed -i 's/^CONFIG_PACKAGE_qbittorrent=y/# CONFIG_PACKAGE_qbittorrent is not set/' openwrt/.config
+          sed -i 's/^CONFIG_PACKAGE_qt6-core=y/# CONFIG_PACKAGE_qt6-core is not set/' openwrt/.config
+          sed -i 's/^CONFIG_PACKAGE_boost-system=y/# CONFIG_PACKAGE_boost-system is not set/' openwrt/.config
+          sed -i 's/^CONFIG_PACKAGE_samba4-server=y/# CONFIG_PACKAGE_samba4-server is not set/' openwrt/.config
+        fi
+        
+        cd openwrt && make defconfig
+        
+    - name: SSH connection to Actions
+      uses: csexton/debugger-action@master
+      if: ${{ inputs.ssh }}
+      
+    - name: Upload build config
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-config
+        path: |
+          openwrt/.config
+          openwrt/feeds.conf.default
+      
+    - name: Download packages
+      working-directory: ./openwrt
+      run: |
+        echo "=== 下载软件包 ==="
+        # 先尝试正常下载
+        make download -j4 V=s || {
+          echo ">>> 下载失败，尝试单线程重试"
+          make download -j1 V=s
+        }
+        # 删除小于1KB的错误文件
+        find dl -size -1024c -delete
+        
+        # 显示下载统计
+        echo "下载完成：$(ls dl | wc -l) 个文件"
+
+    - name: Compile with monitoring
+      id: compile
+      run: |
+        cd openwrt/
+        
+        # 启动后台监控
+        (
+          while true; do
+            echo "=== 系统状态监控 $(date) ==="
+            echo "CPU 使用:"
+            top -bn1 | head -20
+            echo "内存使用:"
+            free -h
+            echo "磁盘使用:"
+            df -h /
+            echo "ccache 统计:"
+            ccache -s
+            echo "等待5分钟..."
+            sleep 300
+          done
+        ) > monitor.log 2>&1 &
+        MONITOR_PID=$!
+        
+        echo "=== 开始编译 ==="
+        make defconfig
+        
+        # 根据参数选择编译模式
+        if [[ "${{ inputs.log_switch }}" == "true" ]]; then
+            # 详细日志模式，但使用2个线程平衡速度与稳定性
+            make -j2 V=s 2>&1 | tee build.log
+        elif [[ "${{ inputs.minimal_build }}" == "true" ]]; then
+            # 最小化编译，使用全部核心
+            make -j$(nproc)
+        else
+            # 正常编译，使用核心数的一半，避免内存耗尽
+            make -j$(( $(nproc) / 2 + 1 ))
+        fi
+        
+        # 停止监控
+        kill $MONITOR_PID 2>/dev/null || true
+        
+        # 检查编译结果
+        if [ -f bin/targets/*/*/*-squashfs-* ]; then
+          echo "✅ 编译成功"
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+          echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "❌ 编译失败"
+          # 上传编译日志用于调试
+          cp build.log /tmp/ || true
+          exit 1
+        fi
+
+    - name: Upload build logs on failure
+      if: failure() && steps.compile.outcome == 'failure'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          openwrt/build.log
+          openwrt/monitor.log
+          openwrt/logs/
+          openwrt/dl/
+        retention-days: 7
+        
+    - name: Organize firmware files
+      id: organize
+      if: env.UPLOAD_FIRMWARE == 'true' && steps.compile.outputs.status == 'success'
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+        
+        echo "固件文件列表："
+        ls -lh
+
+    - name: Upload firmware to artifacts
+      uses: actions/upload-artifact@v4
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware_XG-040G-MD${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}${{ inputs.minimal_build && '_minimal' || '' }}
+        path: ${{ env.FIRMWARE }}/*
+
+    - name: Generate release info
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'
+      run: |
+        echo "release_tag=HomeProxy-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
+        
+        cat <<EOF > release.txt
+        🚀 OpenWrt 固件 for XG-040G-MD
+        
+        ### 编译信息
+        - **时间**: $(date +"%Y-%m-%d %H:%M:%S")
+        - **源码**: $REPO_URL
+        - **分支**: $REPO_BRANCH
+        - **模式**: ${{ inputs.minimal_build && '最小化编译' || '完整编译' }}
+        
+        ### 包含的主要功能
+        - ✅ HomeProxy (代理)
+        - ✅ mwan3 (多线负载均衡)
+        - ✅ SmartDNS
+        - ✅ ZeroTier (VPN)
+        ${{ !inputs.minimal_build && '  - ✅ qBittorrent (下载)' || '  - ⏸️ qBittorrent (最小化模式已禁用)' }}
+        - ✅ vsFTPd (FTP服务器)
+        ${{ !inputs.minimal_build && '  - ✅ Samba4 (文件共享)' || '  - ⏸️ Samba4 (最小化模式已禁用)' }}
+        - ✅ diskman (磁盘管理)
+        - ✅ CPU状态监控
+        - ✅ ttyd (Web终端)
+        
+        ### 安装说明
+        1. 下载对应设备的固件文件
+        2. 在路由器后台升级或通过 breed 刷入
+        3. 默认IP: 192.168.2.1
+        4. 默认密码: password
+        
+        ### 注意事项
+        - 首次刷机后建议恢复出厂设置
+        - 如有问题请提供编译日志
+        EOF
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        body_path: release.txt
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: Cleanup old workflow runs
+      uses: LeeHe-gif/delete-workflow-runs@main
+      with:
+        retain_days: 7
+        keep_minimum_runs: 5
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Final status
+      if: always()
+      run: |
+        echo "=== 编译结束 ==="
+        echo "状态: ${{ job.status }}"
+        echo "磁盘使用情况:"
+        df -h
+        echo "ccache 统计:"
+        ccache -s
