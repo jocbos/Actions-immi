@@ -56,3 +56,9 @@ chmod +x files/etc/init.d/custom-startup
 cd $GITHUB_WORKSPACE
 
 echo "DIY script completed!"
+# 强制取消 wget 及其依赖
+sed -i '/CONFIG_PACKAGE_wget/d' .config
+echo "# CONFIG_PACKAGE_wget is not set" >> .config
+echo "# CONFIG_PACKAGE_wget-ssl is not set" >> .config
+echo "# CONFIG_PACKAGE_wget-nossl is not set" >> .config
+make defconfig
