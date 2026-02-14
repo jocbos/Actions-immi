@@ -1,0 +1,303 @@
+#!/bin/bash
+#
+# Automatically generated file; DO NOT EDIT.
+# ImmortalWrt Configuration - XG-040G-MD HomeProxy定制版
+#
+
+# 目标平台配置 (保持原样)
+CONFIG_MODULES=y
+CONFIG_HAVE_DOT_CONFIG=y
+CONFIG_HOST_OS_LINUX=y
+CONFIG_TARGET_airoha=y
+CONFIG_TARGET_airoha_an7581=y
+CONFIG_TARGET_airoha_an7581_DEVICE_bell_xg-040g-md=y
+CONFIG_TARGET_ARCH_PACKAGES="aarch64_cortex-a53"
+CONFIG_DEFAULT_TARGET_OPTIMIZATION="-Os -pipe -mcpu=cortex-a53"
+CONFIG_CPU_TYPE="cortex-a53"
+CONFIG_LINUX_6_12=y
+
+# 基础系统包
+CONFIG_PACKAGE_base-files=y
+CONFIG_PACKAGE_block-mount=y
+CONFIG_PACKAGE_ca-bundle=y
+CONFIG_PACKAGE_default-settings-chn=y
+CONFIG_PACKAGE_dnsmasq-full=y
+CONFIG_PACKAGE_dropbear=y
+CONFIG_PACKAGE_firewall4=y
+CONFIG_PACKAGE_fstools=y
+CONFIG_PACKAGE_libc=y
+CONFIG_PACKAGE_libgcc=y
+CONFIG_PACKAGE_libustream-openssl=y
+CONFIG_PACKAGE_logd=y
+CONFIG_PACKAGE_mtd=y
+CONFIG_PACKAGE_netifd=y
+CONFIG_PACKAGE_nftables=y
+CONFIG_PACKAGE_odhcp6c=y
+CONFIG_PACKAGE_odhcpd-ipv6only=y
+CONFIG_PACKAGE_ppp=y
+CONFIG_PACKAGE_ppp-mod-pppoe=y
+CONFIG_PACKAGE_procd-ujail=y
+CONFIG_PACKAGE_uci=y
+CONFIG_PACKAGE_uclient-fetch=y
+CONFIG_PACKAGE_urandom-seed=y
+CONFIG_PACKAGE_urngd=y
+CONFIG_PACKAGE_wifi-scripts=y
+
+# 固件格式
+CONFIG_TARGET_ROOTFS_INITRAMFS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_SQUASHFS_BLOCK_SIZE=256
+
+# 内核模块 - 硬件支持
+CONFIG_PACKAGE_kmod-i2c-an7581=y
+CONFIG_PACKAGE_kmod-input-gpio-keys-polled=y
+CONFIG_PACKAGE_kmod-phy-airoha-en8811h=y
+CONFIG_PACKAGE_kmod-usb-xhci-mtk=y
+CONFIG_PACKAGE_kmod-usb3=y
+CONFIG_PACKAGE_airoha-en7581-npu-firmware=y
+CONFIG_PACKAGE_airoha-en8811h-firmware=y
+
+# 内核模块 - USB存储支持
+CONFIG_PACKAGE_kmod-usb-core=y
+CONFIG_PACKAGE_kmod-usb-ohci=y
+CONFIG_PACKAGE_kmod-usb-uhci=y
+CONFIG_PACKAGE_kmod-usb-storage=y
+CONFIG_PACKAGE_kmod-usb2=y
+CONFIG_PACKAGE_kmod-usb3=y
+CONFIG_PACKAGE_kmod-scsi-core=y
+CONFIG_PACKAGE_kmod-fs-vfat=y
+CONFIG_PACKAGE_kmod-fs-exfat=y
+CONFIG_PACKAGE_kmod-fs-ntfs3=y
+CONFIG_PACKAGE_kmod-fs-ext4=y
+CONFIG_PACKAGE_kmod-fs-btrfs=y
+
+# 内核模块 - 网络支持
+CONFIG_PACKAGE_kmod-usb-net=y
+CONFIG_PACKAGE_kmod-usb-net-cdc-eem=y
+CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
+CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
+CONFIG_PACKAGE_kmod-usb-net-cdc-ncm=y
+CONFIG_PACKAGE_kmod-usb-net-huawei-cdc-ncm=y
+CONFIG_PACKAGE_kmod-usb-net-ipheth=y
+CONFIG_PACKAGE_kmod-usb-net-qmi-wwan=y
+CONFIG_PACKAGE_kmod-usb-net-rndis=y
+CONFIG_PACKAGE_kmod-usb-serial=y
+CONFIG_PACKAGE_kmod-usb-serial-option=y
+CONFIG_PACKAGE_kmod-usb-serial-qualcomm=y
+CONFIG_PACKAGE_kmod-mii=y
+CONFIG_PACKAGE_kmod-macvlan=y
+CONFIG_PACKAGE_kmod-tun=y
+CONFIG_PACKAGE_kmod-ppp=y
+CONFIG_PACKAGE_kmod-pppoe=y
+CONFIG_PACKAGE_kmod-pppox=y
+CONFIG_PACKAGE_kmod-mppe=y
+CONFIG_PACKAGE_kmod-slhc=y
+
+# 内核模块 - 无线网卡驱动
+CONFIG_PACKAGE_kmod-cfg80211=y
+CONFIG_PACKAGE_kmod-mac80211=y
+CONFIG_PACKAGE_kmod-rtl8812au-ct=y
+CONFIG_PACKAGE_kmod-rtw88=y
+CONFIG_PACKAGE_kmod-rtw88-8812au=y
+CONFIG_PACKAGE_kmod-rtw88-8814au=y
+CONFIG_PACKAGE_kmod-rtw88-8821au=y
+CONFIG_PACKAGE_kmod-rtw88-8821cu=y
+CONFIG_PACKAGE_kmod-rtw88-8822bu=y
+CONFIG_PACKAGE_kmod-rtw88-8822cu=y
+CONFIG_PACKAGE_kmod-rtw88-usb=y
+CONFIG_PACKAGE_aic8800-usb-firmware=y
+
+# 内核模块 - Netfilter
+CONFIG_PACKAGE_kmod-ipt-conntrack=y
+CONFIG_PACKAGE_kmod-ipt-conntrack-extra=y
+CONFIG_PACKAGE_kmod-ipt-core=y
+CONFIG_PACKAGE_kmod-ipt-ipopt=y
+CONFIG_PACKAGE_kmod-ipt-ipset=y
+CONFIG_PACKAGE_kmod-ipt-nat=y
+CONFIG_PACKAGE_kmod-ipt-nat-extra=y
+CONFIG_PACKAGE_kmod-nf-conntrack=y
+CONFIG_PACKAGE_kmod-nf-conntrack6=y
+CONFIG_PACKAGE_kmod-nf-flow=y
+CONFIG_PACKAGE_kmod-nf-ipt=y
+CONFIG_PACKAGE_kmod-nf-ipt6=y
+CONFIG_PACKAGE_kmod-nf-nat=y
+CONFIG_PACKAGE_kmod-nf-nathelper=y
+CONFIG_PACKAGE_kmod-nfnetlink=y
+CONFIG_PACKAGE_kmod-nft-core=y
+CONFIG_PACKAGE_kmod-nft-fullcone=y
+CONFIG_PACKAGE_kmod-nft-nat=y
+CONFIG_PACKAGE_kmod-nft-offload=y
+
+# LuCI基础
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-mod-admin-full=y
+CONFIG_PACKAGE_luci-mod-network=y
+CONFIG_PACKAGE_luci-mod-status=y
+CONFIG_PACKAGE_luci-mod-system=y
+CONFIG_PACKAGE_luci-proto-ipv6=y
+CONFIG_PACKAGE_luci-proto-ppp=y
+CONFIG_LUCI_LANG_zh_Hans=y
+CONFIG_PACKAGE_luci-theme-argon=y
+CONFIG_PACKAGE_luci-theme-bootstrap=y
+
+# ========== 您需要的功能 ==========
+
+# 1. mwan3 (多线负载均衡)
+CONFIG_PACKAGE_luci-app-mwan3=y
+CONFIG_PACKAGE_mwan3=y
+CONFIG_PACKAGE_iptables-mod-conntrack-extra=y
+CONFIG_PACKAGE_iptables-mod-ipopt=y
+CONFIG_PACKAGE_ip-full=y
+
+# 2. SmartDNS
+CONFIG_PACKAGE_luci-app-smartdns=y
+CONFIG_PACKAGE_smartdns=y
+
+# 3. ZeroTier (VPN)
+CONFIG_PACKAGE_luci-app-zerotier=y
+CONFIG_PACKAGE_zerotier=y
+
+# 4. HomeProxy (代理工具 - 轻量级选择)
+CONFIG_PACKAGE_luci-app-homeproxy=y
+# HomeProxy依赖
+CONFIG_PACKAGE_sing-box=y
+CONFIG_PACKAGE_v2ray-geodata=y
+CONFIG_PACKAGE_iptables-mod-tproxy=y
+CONFIG_PACKAGE_kmod-ipt-tproxy=y
+CONFIG_PACKAGE_kmod-ipt-socket=y
+CONFIG_PACKAGE_kmod-nft-socket=y
+CONFIG_PACKAGE_kmod-nft-tproxy=y
+
+# 5. qBittorrent (下载工具)
+CONFIG_PACKAGE_luci-app-qbittorrent=y
+CONFIG_PACKAGE_qbittorrent=y
+# qBittorrent依赖
+CONFIG_PACKAGE_libstdcpp=y
+CONFIG_PACKAGE_qt6-core=y
+CONFIG_PACKAGE_qt6-network=y
+CONFIG_PACKAGE_qt6-sql=y
+CONFIG_PACKAGE_qt6-xml=y
+CONFIG_PACKAGE_boost-system=y
+CONFIG_PACKAGE_boost-filesystem=y
+CONFIG_PACKAGE_boost-thread=y
+CONFIG_PACKAGE_boost-chrono=y
+CONFIG_PACKAGE_boost-random=y
+
+# 6. vsFTPd (FTP服务器)
+CONFIG_PACKAGE_luci-app-vsftpd=y
+CONFIG_PACKAGE_vsftpd=y
+CONFIG_PACKAGE_vsftpd-tls=y
+
+# 7. Samba4 (文件共享)
+CONFIG_PACKAGE_luci-app-samba4=y
+CONFIG_PACKAGE_samba4-server=y
+CONFIG_PACKAGE_samba4-client=y
+CONFIG_PACKAGE_samba4-admin=y
+CONFIG_PACKAGE_samba4-libs=y
+
+# 8. diskman (磁盘管理) - 原配置已有
+CONFIG_PACKAGE_luci-app-diskman=y
+CONFIG_PACKAGE_luci-app-diskman_INCLUDE_btrfs_progs=y
+CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk=y
+CONFIG_PACKAGE_btrfs-progs=y
+CONFIG_PACKAGE_dosfstools=y
+CONFIG_PACKAGE_e2fsprogs=y
+CONFIG_PACKAGE_parted=y
+CONFIG_PACKAGE_smartmontools=y
+CONFIG_PACKAGE_usbutils=y
+
+# 9. CPU相关
+CONFIG_PACKAGE_luci-app-cpu-status=y
+CONFIG_PACKAGE_cpufreq=y
+
+# 10. ttyd (Web终端) - 原配置已有
+CONFIG_PACKAGE_luci-app-ttyd=y
+CONFIG_PACKAGE_ttyd=y
+
+# 额外实用工具
+CONFIG_PACKAGE_htop=y
+CONFIG_PACKAGE_iftop=y
+CONFIG_PACKAGE_nano=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget-ssl=y
+CONFIG_PACKAGE_tcpdump=y
+CONFIG_PACKAGE_iperf3=y
+CONFIG_PACKAGE_openssh-sftp-server=y
+CONFIG_PACKAGE_gdisk=y
+CONFIG_PACKAGE_lsof=y
+
+# ========== 移除了不必要的代理工具 ==========
+# 以下工具保持未选中状态
+# CONFIG_PACKAGE_luci-app-bypass is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus is not set
+# CONFIG_PACKAGE_luci-app-openclash is not set
+# CONFIG_PACKAGE_luci-app-passwall is not set
+# CONFIG_PACKAGE_luci-app-filebrowser is not set
+# CONFIG_PACKAGE_luci-app-lucky is not set
+# CONFIG_PACKAGE_luci-app-rtp2httpd is not set
+# CONFIG_PACKAGE_v2ray-plugin is not set
+
+# 其他配置保持默认
+CONFIG_KERNEL_DEBUG_INFO=y
+CONFIG_KERNEL_DEBUG_INFO_REDUCED=y
+CONFIG_PACKAGE_kmod-crypto-acompress=y
+CONFIG_PACKAGE_kmod-crypto-aead=y
+CONFIG_PACKAGE_kmod-crypto-hash=y
+CONFIG_PACKAGE_kmod-crypto-manager=y
+CONFIG_PACKAGE_kmod-crypto-null=y
+CONFIG_PACKAGE_kmod-crypto-rng=y
+CONFIG_PACKAGE_kmod-leds-gpio=y
+CONFIG_PACKAGE_kmod-lib-crc-ccitt=y
+CONFIG_PACKAGE_kmod-lib-crc16=y
+CONFIG_PACKAGE_kmod-lib-crc32c=y
+CONFIG_PACKAGE_kmod-lib-lzo=y
+CONFIG_PACKAGE_kmod-lib-raid6=y
+CONFIG_PACKAGE_kmod-lib-xor=y
+CONFIG_PACKAGE_kmod-lib-zlib-deflate=y
+CONFIG_PACKAGE_kmod-lib-zlib-inflate=y
+CONFIG_PACKAGE_libblkid=y
+CONFIG_PACKAGE_libblobmsg-json=y
+CONFIG_PACKAGE_libcap-ng=y
+CONFIG_PACKAGE_libcomerr=y
+CONFIG_PACKAGE_libe2p=y
+CONFIG_PACKAGE_libelf=y
+CONFIG_PACKAGE_libext2fs=y
+CONFIG_PACKAGE_libgmp=y
+CONFIG_PACKAGE_libiwinfo=y
+CONFIG_PACKAGE_libjson-c=y
+CONFIG_PACKAGE_liblua=y
+CONFIG_PACKAGE_liblucihttp=y
+CONFIG_PACKAGE_liblucihttp-lua=y
+CONFIG_PACKAGE_liblucihttp-ucode=y
+CONFIG_PACKAGE_liblzo=y
+CONFIG_PACKAGE_libmnl=y
+CONFIG_PACKAGE_libmount=y
+CONFIG_PACKAGE_libncurses=y
+CONFIG_PACKAGE_libnetfilter-conntrack=y
+CONFIG_PACKAGE_libnettle=y
+CONFIG_PACKAGE_libnfnetlink=y
+CONFIG_PACKAGE_libnftnl=y
+CONFIG_PACKAGE_libnghttp2=y
+CONFIG_PACKAGE_libnl-tiny=y
+CONFIG_PACKAGE_libopenssl=y
+CONFIG_PACKAGE_libparted=y
+CONFIG_PACKAGE_libreadline=y
+CONFIG_PACKAGE_libruby=y
+CONFIG_PACKAGE_libsmartcols=y
+CONFIG_PACKAGE_libss=y
+CONFIG_PACKAGE_libubox=y
+CONFIG_PACKAGE_libubus=y
+CONFIG_PACKAGE_libubus-lua=y
+CONFIG_PACKAGE_libuci=y
+CONFIG_PACKAGE_libuclient=y
+CONFIG_PACKAGE_libucode=y
+CONFIG_PACKAGE_libuuid=y
+CONFIG_PACKAGE_rpcd=y
+CONFIG_PACKAGE_rpcd-mod-file=y
+CONFIG_PACKAGE_rpcd-mod-iwinfo=y
+CONFIG_PACKAGE_rpcd-mod-luci=y
+CONFIG_PACKAGE_rpcd-mod-rpcsys=y
+CONFIG_PACKAGE_rpcd-mod-ucode=y
+CONFIG_PACKAGE_terminfo=y
+CONFIG_PACKAGE_zlib=y
