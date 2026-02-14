@@ -81,14 +81,35 @@ jobs:
     - name: Create swap space
       run: |
         echo "=== 创建交换空间 ==="
-        # 创建 3GB 交换文件
-        sudo fallocate -l 3G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-        echo "交换空间状态："
-        sudo swapon --show
-        free -h
+    
+        # 关闭所有现有交换
+        sudo swapoff -a 2>/dev/null || true
+    
+        # 删除可能存在的旧交换文件
+        sudo rm -f /swapfile 2>/dev/null || true
+    
+        # 确保磁盘有足够空间
+        df -h /
+    
+        # 使用 dd 命令创建交换文件（更可靠）
+        echo "使用 dd 创建 3GB 交换文件..."
+        sudo dd if=/dev/zero of=/swapfile bs=1M count=3072 status=progress
+    
+        if [ $? -eq 0 ]; then
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+      
+          echo "✅ 交换空间创建成功"
+          echo "交换空间状态："
+          sudo swapon --show
+          free -h
+      
+          # 设置交换使用倾向
+          echo 60 | sudo tee /proc/sys/vm/swappiness
+        else
+          echo "❌ 交换空间创建失败，继续编译但不使用交换"
+        fi
 
     - name: Setup ccache with optimization
       uses: hendrikmuhs/ccache-action@v1.2
