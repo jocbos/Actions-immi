@@ -3,7 +3,6 @@
 
 # 添加额外的软件源（如果需要）
 cat >> feeds.conf.default <<EOF
-# src-git small8 https://github.com/kenzok8/small-package
 src-git kenzo https://github.com/kenzok8/openwrt-packages
 src-git small https://github.com/kenzok8/small
 EOF
