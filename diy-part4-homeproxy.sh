@@ -57,6 +57,13 @@ sed -i '/CONFIG_PACKAGE_wget/d' .config
 echo "# CONFIG_PACKAGE_wget is not set" >> .config
 echo "# CONFIG_PACKAGE_wget-ssl is not set" >> .config
 echo "# CONFIG_PACKAGE_wget-nossl is not set" >> .config
+# 强制删除并禁用 transmission-web-control
+sed -i '/CONFIG_PACKAGE_transmission-web-control/d' .config
+echo "# CONFIG_PACKAGE_transmission-web-control is not set" >> .config
+
+# 确保官方 web 被选中
+sed -i '/CONFIG_PACKAGE_transmission-web/d' .config
+echo "CONFIG_PACKAGE_transmission-web=y" >> .config
 make defconfig
 
 echo "DIY script completed successfully!"
