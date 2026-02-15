@@ -15,6 +15,13 @@ echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
 # 更新 feeds
 ./scripts/feeds update -a
 ./scripts/feeds install -a
+# ===== 新增：强制移除 transmission-web-control =====
+echo ">>> 强制移除 transmission-web-control 的 Makefile"
+rm -f package/feeds/*/transmission-web-control/Makefile
+rm -f feeds/*/transmission-web-control/Makefile
+
+# 重新安装 feeds 以确保其他包依赖正确（但 web-control 已经被删了）
+
 
 # 修改默认IP为 192.168.2.1 (避免与光猫冲突)
 sed -i 's/192.168.1.1/192.168.2.1/g' package/base-files/files/bin/config_generate
