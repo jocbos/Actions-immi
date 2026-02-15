@@ -18,11 +18,7 @@ on:
         required: false
         default: false
         type: boolean
-      minimal_build:
-        description: '⚡ 最小化编译（跳过大型包）'
-        required: false
-        default: false
-        type: boolean
+      
 
 env:
   CONFIG_FILE: 'config/040new.config'
@@ -206,16 +202,6 @@ jobs:
       run: |
         echo "=== 配置定制 ==="
         cp -fv "${CONFIG_FILE}" openwrt/.config
-        
-        # 如果选择最小化编译，注释掉大型包
-        if [ "${{ inputs.minimal_build }}" == "true" ]; then
-          echo ">>> 最小化编译模式：注释大型软件包"
-          sed -i 's/^CONFIG_PACKAGE_luci-app-qbittorrent=y/# CONFIG_PACKAGE_luci-app-qbittorrent is not set/' openwrt/.config
-          sed -i 's/^CONFIG_PACKAGE_qbittorrent=y/# CONFIG_PACKAGE_qbittorrent is not set/' openwrt/.config
-          sed -i 's/^CONFIG_PACKAGE_qt6-core=y/# CONFIG_PACKAGE_qt6-core is not set/' openwrt/.config
-          sed -i 's/^CONFIG_PACKAGE_boost-system=y/# CONFIG_PACKAGE_boost-system is not set/' openwrt/.config
-          sed -i 's/^CONFIG_PACKAGE_samba4-server=y/# CONFIG_PACKAGE_samba4-server is not set/' openwrt/.config
-        fi
         
         cd openwrt && make defconfig
         
