@@ -1,11 +1,16 @@
 #!/bin/bash
 # 自定义预编译脚本 - HomeProxy版 (已在openwrt目录内执行)
 
-# 添加额外的软件源（如果需要）
-cat >> feeds.conf.default <<EOF
-src-git kenzo https://github.com/kenzok8/openwrt-packages
-src-git small https://github.com/kenzok8/small
-EOF
+# 添加额外的软件源（先去重）
+echo "=== 配置软件源 ==="
+# 删除可能存在的旧源
+sed -i '/kenzo/d' feeds.conf.default
+sed -i '/small/d' feeds.conf.default
+sed -i '/small8/d' feeds.conf.default
+
+# 添加新源
+echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
+echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
 
 # 更新 feeds
 ./scripts/feeds update -a
