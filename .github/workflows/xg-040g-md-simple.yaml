@@ -41,11 +41,14 @@ jobs:
         android: true
         dotnet: true
 
-    - name: Setup ccache
+    - name: Setup ccache with optimization
       uses: hendrikmuhs/ccache-action@v1.2
       with:
-        key: openwrt-gateway-${{ env.REPO_BRANCH }}
+        key: openwrt-gateway-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+        restore-keys: |
+          openwrt-gateway-${{ env.REPO_BRANCH }}-
         max-size: 3G
+        variant: none  # 临时禁用
 
     - name: Initialization environment
       id: init
