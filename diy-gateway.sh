@@ -16,9 +16,6 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/M
 # 系统优化参数
 mkdir -p files/etc/sysctl.d
 cat >> files/etc/sysctl.d/99-custom.conf <<EOF
-# BBR 拥塞控制
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
 # 网络优化
 net.core.rmem_max = 134217728
 net.core.wmem_max = 134217728
