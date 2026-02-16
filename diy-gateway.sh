@@ -8,7 +8,7 @@
 # echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
 
 # 修改默认IP为 192.168.2.1
-sed -i 's/192.168.1.1/192.168.2.1/g' package/base-files/files/bin/config_generate
+sed -i 's/192.168.1.1/192.168.100.254/g' package/base-files/files/bin/config_generate
 
 # 修改默认主题为 argon
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
