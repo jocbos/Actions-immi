@@ -1,4 +1,4 @@
-name: Build Gateway Firmware for XG-040G-MD
+name: Build Gateway Firmware for XG-040G-MD spring
 
 on:
   workflow_dispatch:
