@@ -1,4 +1,4 @@
-name: Build Gateway Firmware for XG-040G-MD spring
+name: Build Gateway Firmware for XG-040G-MD
 
 on:
   workflow_dispatch:
@@ -14,18 +14,15 @@ on:
         default: false
         type: boolean
   schedule:
-    - cron: '0 20 * * 0'  # 每周日晚8点自动编译
+    - cron: '0 20 * * 0'
   push:
     branches: [main, master]
     paths:
       - 'config/**'
-      - 'diy-gateway.sh'
+      - 'diy-gateway1.sh'
 
 env:
   CONFIG_FILE: 'config/gateway1.config'
-  REPO_URL: https://github.com/bingoguo93/immortalwrt
-  REPO_BRANCH: openwrt-25.12
-  FEEDS_CONF: feeds.conf.default
   DIY_P4_SH: diy-gateway1.sh
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
@@ -74,9 +71,7 @@ jobs:
     - name: Clone source code
       if: steps.init.outputs.status == 'success'
       run: |
-        for i in {1..3}; do
-          git clone --depth 1 "$REPO_URL" -b "$REPO_BRANCH" openwrt && break || sleep 10
-        done
+        git clone --depth 1 https://github.com/bingoguo93/immortalwrt -b openwrt-25.12 openwrt
 
     - name: Setup build directories
       run: |
@@ -86,9 +81,8 @@ jobs:
         ln -sfn /mnt/openwrt/staging_dir openwrt/staging_dir
         ln -sfn /mnt/openwrt/build_dir openwrt/build_dir
 
-    - name: Load custom feeds & diy script
+    - name: Run DIY script
       run: |
-        [ -e $FEEDS_CONF ] && cp $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P4_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P4_SH
@@ -98,6 +92,13 @@ jobs:
       run: |
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+
+    - name: Run post-feeds script
+      working-directory: ./openwrt
+      run: |
+        if [ -f "$GITHUB_WORKSPACE/post-feeds.sh" ]; then
+          $GITHUB_WORKSPACE/post-feeds.sh
+        fi
 
     - name: Configuration
       run: |
@@ -113,7 +114,6 @@ jobs:
       working-directory: ./openwrt
       run: |
         make download -j8 V=s || make download -j1 V=s
-        find dl -size -1024c -exec ls -l {} \;
 
     - name: Compile firmware
       id: compile
@@ -131,10 +131,6 @@ jobs:
             make -j${BUILD_CORES}
         fi
         
-        END_TIME=$(date +%s)
-        DURATION=$((END_TIME - START_TIME))
-        echo "编译耗时: $((DURATION/60))分$((DURATION%60))秒"
-        
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
 
@@ -144,12 +140,6 @@ jobs:
         cd openwrt/bin/targets/*/*
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        
-        cat > firmware_info.txt << EOF
-        编译时间: $(date +"%Y-%m-%d %H:%M:%S")
-        目标设备: XG-040G-MD
-        功能: 老版firewall + ksmbd/vsftpd + Aria2 + sirboy主题
-        EOF
 
     - name: Upload firmware
       uses: actions/upload-artifact@v4
@@ -157,8 +147,8 @@ jobs:
       with:
         name: OpenWrt_XG-040G-MD${{ env.FILE_DATE }}
         path: |
-          ${{ env.FIRMWARE }}/*
-          !${{ env.FIRMWARE }}/packages
+          ${{ env.FIRMWARE }}/*.bin
+          ${{ env.FIRMWARE }}/*.manifest
 
     - name: Generate release info
       id: tag
@@ -167,34 +157,24 @@ jobs:
         echo "release_tag=XG-040G-MD-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         
         cat <<EOF > release.txt
-        🚀 XG-040G-MD 网关固件 (全能版)
+        🚀 XG-040G-MD 网关固件
         ----------------------
         📅 编译时间: $(date +"%Y-%m-%d %H:%M")
         
         ### ✨ 功能特性
-        - **防火墙**: 老版 iptables (完美兼容mwan3)
+        - **防火墙**: 老版 iptables
         - **文件共享**: ksmbd (SMB) + vsftpd (FTP)
-        - **下载服务**: Aria2 + AriaNg (HTTP/BT/磁力链)
-        - **美化主题**: sirboy kucat主题 + advancedplus
+        - **下载服务**: Aria2 + AriaNg
+        - **美化主题**: kucat + advancedplus
         - **网络核心**: mwan3 + SmartDNS + HomeProxy + ZeroTier
         - **IPTV**: igmpproxy + udpxy
         - **网络加速**: Shortcut-FE + BBR
         
-        ### 🔧 精简说明
-        - ✅ 移除SQM (实际不起作用)
-        - ✅ 老版firewall避免与mwan3冲突
-        - ✅ USB自动挂载 (/mnt/usb_disk)
-        
         ### 📝 访问方式
         - **路由器**: http://192.168.100.254
-        - **AriaNg下载管理**: http://192.168.100.254/ariang
+        - **下载管理**: http://192.168.100.254/ariang
         - **FTP**: ftp://192.168.100.254
-        - **SMB共享**: \\\\192.168.100.254\\USB_Share
-        
-        ### 📥 刷机说明
-        1. 下载 sysupgrade 固件
-        2. 在现有 OpenWrt 中刷入
-        3. 首次刷入建议恢复出厂设置
+        - **SMB**: \\\\192.168.100.254\\USB_Share
         EOF
         
         echo "status=success" >> $GITHUB_OUTPUT
