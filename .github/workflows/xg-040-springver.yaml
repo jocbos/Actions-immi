@@ -16,8 +16,8 @@ on:
       - 'diy.sh'
 
 env:
-  CONFIG_FILE: 'config/gateway.config'
-  DIY_SCRIPT: diy.sh
+  CONFIG_FILE: 'config/gateway1.config'
+  DIY_SCRIPT: diy-gateway1.sh
   REPO_URL: https://github.com/bingoguo93/immortalwrt
   REPO_BRANCH: openwrt-25.12
   TZ: Asia/Shanghai
