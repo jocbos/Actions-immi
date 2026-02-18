@@ -1,4 +1,4 @@
-name: Build XG-040G-MD 老楼版
+name: Build XG-040G-MD 小楼版
 
 on:
   workflow_dispatch:
