@@ -8,11 +8,16 @@ on:
         required: false
         default: false
         type: boolean
+      log_switch:
+        description: '📝 详细编译日志'
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main, master]
     paths:
       - 'config/**'
-      - 'diy.sh'
+      - 'diy-gateway1.sh'
 
 env:
   CONFIG_FILE: 'config/gateway1.config'
@@ -78,7 +83,13 @@ jobs:
       working-directory: ./openwrt
       run: |
         START_TIME=$(date +%s)
-        make -j$(nproc)
+        if [[ "${{ github.event.inputs.log_switch }}" == "true" ]]; then
+            echo "🔍 使用详细日志模式编译"
+            make -j1 V=s
+        else
+            echo "🚀 使用并行模式编译"
+            make -j$(nproc)
+        fi
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
     - name: 整理固件
@@ -90,5 +101,5 @@ jobs:
     - name: 上传固件
       uses: actions/upload-artifact@v4
       with:
-        name: XG-040G-MD_全能版${{ env.FILE_DATE }}
+        name: XG-040G-MD_老楼版${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}/*.bin
