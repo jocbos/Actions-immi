@@ -1,4 +1,5 @@
-name: Build Gateway Firmware for XG-040G-MD  Ver spring
+yaml
+name: Build XG-040G-MD 全能版
 
 on:
   workflow_dispatch:
@@ -8,183 +9,87 @@ on:
         required: false
         default: false
         type: boolean
-      log_switch:
-        description: '📝 详细编译日志'
-        required: false
-        default: false
-        type: boolean
-  schedule:
-    - cron: '0 20 * * 0'
   push:
     branches: [main, master]
     paths:
       - 'config/**'
-      - 'diy-gateway1.sh'
+      - 'diy.sh'
 
 env:
-  CONFIG_FILE: 'config/gateway1.config'
-  DIY_P4_SH: diy-gateway1.sh
-  UPLOAD_FIRMWARE: true
-  UPLOAD_RELEASE: true
+  CONFIG_FILE: 'config/gateway.config'
+  DIY_SCRIPT: diy.sh
+  REPO_URL: https://github.com/bingoguo93/immortalwrt
+  REPO_BRANCH: openwrt-25.12
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 300
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@master
 
-    - name: Free disk space
+    - name: 清理磁盘空间
       uses: jlumbroso/free-disk-space@main
       with:
         tool-cache: true
         android: true
         dotnet: true
         large-packages: true
-        docker-images: true
 
-    - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        key: ${{ github.workflow }}-${{ github.job }}
-        max-size: 2G
-        save: true
-
-    - name: Initialization environment
-      id: init
+    - name: 安装依赖
       run: |
-        sudo -E apt-get -y update
-        sudo -E apt-get -y install build-essential clang flex bison g++ gawk \
+        sudo apt-get update
+        sudo apt-get install -y build-essential clang flex bison g++ gawk \
         gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
-        python3 python3-dev python3-setuptools python3-pip rsync unzip zlib1g-dev file wget \
-        pigz libelf-dev ecj fastjar
-        
-        sudo timedatectl set-timezone "${TZ}"
-        sudo ln -sf /usr/bin/python3 /usr/bin/python
-        echo "status=success" >> ${GITHUB_OUTPUT}
+        python3 python3-setuptools rsync unzip zlib1g-dev file wget pigz
 
-    - name: Clone source code
-      if: steps.init.outputs.status == 'success'
-      run: |
-        git clone --depth 1 https://github.com/bingoguo93/immortalwrt -b openwrt-25.12 openwrt
+    - name: 克隆源码
+      run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
 
-    - name: Setup build directories
+    - name: 创建缓存目录
       run: |
-        sudo mkdir -p /mnt/openwrt/{dl,staging_dir,build_dir,ccache}
+        sudo mkdir -p /mnt/openwrt/{dl,ccache}
         sudo chown -R $USER:$GROUPS /mnt/openwrt
         ln -sfn /mnt/openwrt/dl openwrt/dl
-        ln -sfn /mnt/openwrt/staging_dir openwrt/staging_dir
-        ln -sfn /mnt/openwrt/build_dir openwrt/build_dir
 
-    - name: Run DIY script
+    - name: 运行DIY脚本
       run: |
-        chmod +x $DIY_P4_SH
+        chmod +x $DIY_SCRIPT
         cd openwrt
-        $GITHUB_WORKSPACE/$DIY_P4_SH
+        $GITHUB_WORKSPACE/$DIY_SCRIPT
 
-    - name: Update & Install feeds
+    - name: 更新feeds
       working-directory: ./openwrt
       run: |
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Run post-feeds script
+    - name: 应用配置
+      run: |
+        cp -f "${CONFIG_FILE}" openwrt/.config
+        cd openwrt && make defconfig
+
+    - name: 下载源码包
+      working-directory: ./openwrt
+      run: make download -j8 || make download -j1
+
+    - name: 编译固件
       working-directory: ./openwrt
       run: |
-        if [ -f "$GITHUB_WORKSPACE/post-feeds.sh" ]; then
-          $GITHUB_WORKSPACE/post-feeds.sh
-        fi
-
-    - name: Configuration
-      run: |
-        cp -fv "${CONFIG_FILE}" openwrt/.config
-        cd openwrt
-        make defconfig
-
-    - name: SSH debug
-      uses: csexton/debugger-action@master
-      if: ${{ inputs.ssh }}
-
-    - name: Download packages
-      working-directory: ./openwrt
-      run: |
-        make download -j8 V=s || make download -j1 V=s
-
-    - name: Compile firmware
-      id: compile
-      run: |
-        cd openwrt/
         START_TIME=$(date +%s)
-        
-        if [[ "${{ inputs.log_switch }}" == "true" ]]; then
-            make -j1 V=s
-        else
-            CORES=$(nproc)
-            BUILD_CORES=$(( CORES * 80 / 100 ))
-            [ $BUILD_CORES -lt 1 ] && BUILD_CORES=1
-            echo "使用 $BUILD_CORES 个核心编译"
-            make -j${BUILD_CORES}
-        fi
-        
+        make -j$(nproc)
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_OUTPUT
 
-    - name: Organize files
-      if: env.UPLOAD_FIRMWARE == 'true' && steps.compile.outputs.status == 'success'
+    - name: 整理固件
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
 
-    - name: Upload firmware
+    - name: 上传固件
       uses: actions/upload-artifact@v4
-      if: steps.compile.outputs.status == 'success'
       with:
-        name: OpenWrt_XG-040G-MD${{ env.FILE_DATE }}
-        path: |
-          ${{ env.FIRMWARE }}/*.bin
-          ${{ env.FIRMWARE }}/*.manifest
-
-    - name: Generate release info
-      id: tag
-      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success'
-      run: |
-        echo "release_tag=XG-040G-MD-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
-        
-        cat <<EOF > release.txt
-        🚀 XG-040G-MD 网关固件
-        ----------------------
-        📅 编译时间: $(date +"%Y-%m-%d %H:%M")
-        
-        ### ✨ 功能特性
-        - **防火墙**: 老版 iptables
-        - **文件共享**: ksmbd (SMB) + vsftpd (FTP)
-        - **下载服务**: Aria2 + AriaNg
-        - **美化主题**: kucat + advancedplus
-        - **网络核心**: mwan3 + SmartDNS + HomeProxy + ZeroTier
-        - **IPTV**: igmpproxy + udpxy
-        - **网络加速**: Shortcut-FE + BBR
-        
-        ### 📝 访问方式
-        - **路由器**: http://192.168.100.254
-        - **下载管理**: http://192.168.100.254/ariang
-        - **FTP**: ftp://192.168.100.254
-        - **SMB**: \\\\192.168.100.254\\USB_Share
-        EOF
-        
-        echo "status=success" >> $GITHUB_OUTPUT
-
-    - name: Upload to release
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: release.txt
-        files: ${{ env.FIRMWARE }}/*.bin
+        name: XG-040G-MD_全能版${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}/*.bin
