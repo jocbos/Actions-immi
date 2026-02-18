@@ -208,25 +208,79 @@ XG-040G-MD 老楼版
 - SMB: \\\\192.168.100.254\\USB_Share
 EOF
 
-# ===== 11. 创建 post-feeds 脚本 =====
+# ===== 11. 创建 post-feeds 脚本（解决冲突）=====
 cat > $GITHUB_WORKSPACE/post-feeds.sh <<'EOF'
 #!/bin/bash
-echo "运行 post-feeds 脚本..."
+echo "=========================================="
+echo "运行 post-feeds 脚本 - 解决包冲突"
+echo "=========================================="
 
+# 1. 修改默认主题为 kucat
 if [ -f "feeds/luci/collections/luci/Makefile" ]; then
     sed -i 's/luci-theme-bootstrap/luci-theme-kucat/g' feeds/luci/collections/luci/Makefile
     echo "✅ 主题修改成功"
 else
     echo "✅ 主题已在 package 目录"
 fi
+
+# 2. 解决 transmission-web 和 transmission-web-control 的冲突
+echo "🔧 检查 Transmission 包冲突..."
+
+# 方法一：如果两个包都存在，删除 web-control 的冲突文件
+if [ -d "feeds/packages/transmission-web-control" ] && [ -d "feeds/packages/transmission-web" ]; then
+    echo "检测到 transmission-web 和 transmission-web-control 同时存在"
+    
+    # 删除 web-control 的 index.html，避免覆盖
+    if [ -f "feeds/packages/transmission-web-control/files/index.html" ]; then
+        rm -f feeds/packages/transmission-web-control/files/index.html
+        echo "✅ 已删除 transmission-web-control 的 index.html 文件"
+    fi
+    
+    # 或者重命名 web-control 的目录，让系统只使用 transmission-web
+    # mv feeds/packages/transmission-web-control feeds/packages/transmission-web-control.disabled
+    # echo "✅ 已禁用 transmission-web-control"
+fi
+
+# 方法二：确保 transmission-web 的 index.html 存在
+if [ -d "feeds/packages/transmission-web" ]; then
+    if [ ! -f "feeds/packages/transmission-web/files/index.html" ]; then
+        echo "创建默认的 transmission-web index.html"
+        mkdir -p feeds/packages/transmission-web/files
+        cat > feeds/packages/transmission-web/files/index.html <<'INNEREOF'
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="refresh" content="0;url=/transmission/web/"></head>
+<body>Redirecting to Transmission...</body>
+</html>
+INNEREOF
+    fi
+    echo "✅ transmission-web 已就绪"
+fi
+
+# 3. 检查是否有其他潜在冲突
+echo "🔧 检查其他潜在包冲突..."
+
+# 查找可能的重复文件
+find ./feeds/packages -name "*.conflict" -type f -delete 2>/dev/null || true
+
+echo "=========================================="
+echo "✅ post-feeds 脚本执行完成"
+echo "=========================================="
 EOF
 
 chmod +x $GITHUB_WORKSPACE/post-feeds.sh
 
-# ===== 12. 生成配置 =====
+# ===== 12. 修改 .config 确保 transmission-web-control 被禁用 =====
+echo "🔧 确保 transmission-web-control 被禁用..."
+cat >> .config <<'EOF'
+# 禁用 transmission-web-control 避免冲突
+# CONFIG_PACKAGE_transmission-web-control is not set
+EOF
+
+# ===== 13. 生成配置 =====
 make defconfig
 
-# ===== 13. 完成信息 =====
+# ===== 14. 完成信息 =====
 echo "=========================================="
 echo "✅ XG-040G-MD 老楼版 DIY脚本执行完成"
 echo "=========================================="
@@ -235,6 +289,6 @@ echo "   - 默认IP: 192.168.100.254"
 echo "   - 防火墙: 老版 iptables"
 echo "   - USB挂载: /mnt/usb_disk"
 echo "   - 文件共享: ksmbd + vsftpd"
-echo "   - 下载服务: Transmission"
+echo "   - 下载服务: Transmission (已处理包冲突)"
 echo "   - 美化主题: kucat"
 echo "=========================================="
