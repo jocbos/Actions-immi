@@ -1,21 +1,24 @@
 #!/bin/bash
 # XG-040G-MD 网关固件 DIY 脚本
-# 功能: 老版firewall + USB自动挂载 + ksmbd/vsftpd + Aria2 + sirboy主题
 
 # ===== 1. 添加软件源 =====
 sed -i '/kenzo/d' feeds.conf.default 2>/dev/null || true
 sed -i '/small/d' feeds.conf.default 2>/dev/null || true
-sed -i '/sirpdboy/d' feeds.conf.default 2>/dev/null || true
 
+# kenzo 和 small 源（稳定）
 echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
 echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
-echo "src-git sirpdboy https://github.com/sirpdboy/sirpdboy-package" >> feeds.conf.default
+
+# 直接下载 sirboy 主题到 package 目录（避免 feeds 源失效）
+cd package
+[ -d "luci-theme-kucat" ] || git clone --depth 1 https://github.com/sirpdboy/luci-theme-kucat.git
+[ -d "luci-app-advancedplus" ] || git clone --depth 1 https://github.com/sirpdboy/luci-app-advancedplus.git
+cd ..
 
 # ===== 2. 系统基础配置 =====
 sed -i 's/192.168.1.1/192.168.100.254/g' package/base-files/files/bin/config_generate
 sed -i 's/ImmortalWrt/XG-040G-MD/g' package/base-files/files/bin/config_generate
 sed -i 's/UTC/Asia/Shanghai/g' package/base-files/files/bin/config_generate
-sed -i 's/luci-theme-bootstrap/luci-theme-kucat/g' feeds/luci/collections/luci/Makefile
 
 # ===== 3. 内核网络优化参数 =====
 mkdir -p files/etc/sysctl.d
@@ -158,13 +161,10 @@ cat > files/www/ariang/index.html <<'EOF'
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AriaNg</title>
-    <style>
-        body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; }
-    </style>
+    <meta http-equiv="refresh" content="0;url=https://ariang.mayswind.net/latest">
 </head>
 <body>
-    <iframe src="https://ariang.mayswind.net/latest"></iframe>
+    <p>正在跳转到 AriaNg...</p>
 </body>
 </html>
 EOF
@@ -213,28 +213,44 @@ chmod +x files/etc/firewall.user
 # ===== 11. 版本信息 =====
 mkdir -p files/etc
 cat > files/etc/xg040gmd_version <<EOF
-XG-040G-MD  (老楼版)
+XG-040G-MD 网关固件
 编译时间: $(date +"%Y-%m-%d %H:%M:%S")
 
 功能特性:
-- 防火墙: 老版 iptables (兼容mwan3)
+- 防火墙: 老版 iptables
 - 文件共享: ksmbd (SMB) + vsftpd (FTP)
 - 下载服务: Aria2 + AriaNg
 - 美化主题: kucat + advancedplus
-- 网络核心: mwan3 + SmartDNS + HomeProxy
+- 网络核心: mwan3 + SmartDNS + HomeProxy + ZeroTier
 - 网络加速: Shortcut-FE + BBR
 
 访问方式:
 - 路由器: http://192.168.100.254
-- AriaNg下载: http://192.168.100.254/ariang
+- 下载管理: http://192.168.100.254/ariang
 - FTP: ftp://192.168.100.254
 - SMB: \\\\192.168.100.254\\USB_Share
 EOF
 
-# ===== 12. 生成配置 =====
+# ===== 12. 创建 post-feeds 脚本 =====
+cat > $GITHUB_WORKSPACE/post-feeds.sh <<'EOF'
+#!/bin/bash
+echo "运行 post-feeds 脚本..."
+
+# 修改默认主题为 kucat
+if [ -f "feeds/luci/collections/luci/Makefile" ]; then
+    sed -i 's/luci-theme-bootstrap/luci-theme-kucat/g' feeds/luci/collections/luci/Makefile
+    echo "✅ 主题修改成功"
+else
+    echo "⚠️ 找不到 feeds/luci/collections/luci/Makefile，主题已在 package 目录，请在 menuconfig 中手动选择"
+fi
+EOF
+
+chmod +x $GITHUB_WORKSPACE/post-feeds.sh
+
+# ===== 13. 生成配置 =====
 make defconfig
 
-# ===== 13. 完成信息 =====
+# ===== 14. 完成信息 =====
 echo "=========================================="
 echo "✅ XG-040G-MD DIY 脚本执行完成"
 echo "=========================================="
@@ -244,5 +260,5 @@ echo "   - 防火墙: 老版 iptables"
 echo "   - USB挂载: /mnt/usb_disk"
 echo "   - 文件共享: ksmbd + vsftpd"
 echo "   - 下载服务: Aria2 + AriaNg"
-echo "   - 美化主题: kucat"
+echo "   - 美化主题: kucat (已下载到 package 目录)"
 echo "=========================================="
