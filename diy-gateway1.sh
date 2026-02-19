@@ -1,6 +1,7 @@
 #!/bin/bash
 # XG-040G-MD 老楼版 DIY脚本
 # 功能: mwan3 + smartdns + zerotier + homeproxy + ksmbd + vsftpd + transmission
+# 方案: 保留 transmission-web-control，删除自带的 transmission-web
 
 # ===== 1. 添加软件源 =====
 sed -i '/kenzo/d' feeds.conf.default 2>/dev/null || true
@@ -197,71 +198,79 @@ XG-040G-MD 老楼版
 - 防火墙: 老版 iptables
 - 网络核心: mwan3 + SmartDNS + ZeroTier + HomeProxy
 - 文件共享: ksmbd (SMB) + vsftpd (FTP)
-- 下载服务: Transmission
+- 下载服务: Transmission (web-control 美化版)
 - 网络加速: Shortcut-FE + BBR
 - 美化主题: kucat + advancedplus
 
 访问方式:
 - 路由器: http://192.168.100.254
-- Transmission: http://192.168.100.254:9091
+- Transmission: http://192.168.100.254:9091 (web-control美化界面)
 - FTP: ftp://192.168.100.254
 - SMB: \\\\192.168.100.254\\USB_Share
 EOF
 
-# ===== 11. 创建 post-feeds 脚本（解决冲突）=====
+# ===== 11. 创建 post-feeds 脚本（保留 web-control，删除 web）=====
 cat > $GITHUB_WORKSPACE/post-feeds.sh <<'EOF'
 #!/bin/bash
 echo "=========================================="
-echo "运行 post-feeds 脚本 - 解决包冲突"
+echo "运行 post-feeds 脚本 - 保留 web-control"
 echo "=========================================="
 
 # 1. 修改默认主题为 kucat
 if [ -f "feeds/luci/collections/luci/Makefile" ]; then
     sed -i 's/luci-theme-bootstrap/luci-theme-kucat/g' feeds/luci/collections/luci/Makefile
     echo "✅ 主题修改成功"
-else
-    echo "✅ 主题已在 package 目录"
 fi
 
-# 2. 解决 transmission-web 和 transmission-web-control 的冲突
-echo "🔧 检查 Transmission 包冲突..."
+# 2. 删除自带的 transmission-web，保留 web-control
+echo "🔧 删除自带的 transmission-web..."
 
-# 方法一：如果两个包都存在，删除 web-control 的冲突文件
-if [ -d "feeds/packages/transmission-web-control" ] && [ -d "feeds/packages/transmission-web" ]; then
-    echo "检测到 transmission-web 和 transmission-web-control 同时存在"
-    
-    # 删除 web-control 的 index.html，避免覆盖
-    if [ -f "feeds/packages/transmission-web-control/files/index.html" ]; then
-        rm -f feeds/packages/transmission-web-control/files/index.html
-        echo "✅ 已删除 transmission-web-control 的 index.html 文件"
-    fi
-    
-    # 或者重命名 web-control 的目录，让系统只使用 transmission-web
-    # mv feeds/packages/transmission-web-control feeds/packages/transmission-web-control.disabled
-    # echo "✅ 已禁用 transmission-web-control"
-fi
-
-# 方法二：确保 transmission-web 的 index.html 存在
+# 在 feeds 目录中删除 transmission-web
 if [ -d "feeds/packages/transmission-web" ]; then
-    if [ ! -f "feeds/packages/transmission-web/files/index.html" ]; then
-        echo "创建默认的 transmission-web index.html"
-        mkdir -p feeds/packages/transmission-web/files
-        cat > feeds/packages/transmission-web/files/index.html <<'INNEREOF'
+    echo "删除 feeds/packages/transmission-web"
+    rm -rf feeds/packages/transmission-web
+    echo "✅ 已删除 transmission-web"
+fi
+
+# 在 package/feeds 目录中删除
+if [ -d "package/feeds/packages/transmission-web" ]; then
+    echo "删除 package/feeds/packages/transmission-web"
+    rm -rf package/feeds/packages/transmission-web
+fi
+
+# 3. 确保 web-control 存在
+if [ -d "feeds/packages/transmission-web-control" ]; then
+    echo "✅ transmission-web-control 已就绪"
+else
+    echo "⚠️ transmission-web-control 不存在，尝试从 kenzo 源获取"
+    # 如果不存在，可能需要额外处理，但通常 kenzo 源会有
+fi
+
+# 4. 删除所有对 transmission-web 的引用（但保留 web-control）
+echo "🔧 清理 Makefile 中的引用..."
+find ./feeds -name "Makefile" -exec grep -l "transmission-web" {} \; | while read file; do
+    # 确保不要误删 web-control 的引用
+    if ! grep -q "transmission-web-control" "$file"; then
+        echo "删除 $file 中的 transmission-web 引用"
+        sed -i '/transmission-web/d' "$file"
+    fi
+done
+
+# 5. 确保 transmission 的 Web 目录指向 web-control
+mkdir -p files/usr/share/transmission
+cat > files/usr/share/transmission/index.html <<'INNEREOF'
 <!DOCTYPE html>
 <html>
-<head><meta http-equiv="refresh" content="0;url=/transmission/web/"></head>
-<body>Redirecting to Transmission...</body>
+<head>
+    <meta http-equiv="refresh" content="0;url=/transmission/web-control/">
+    <title>Transmission Web Control</title>
+</head>
+<body>
+    <p>正在跳转到 Transmission Web Control...</p>
+</body>
 </html>
 INNEREOF
-    fi
-    echo "✅ transmission-web 已就绪"
-fi
-
-# 3. 检查是否有其他潜在冲突
-echo "🔧 检查其他潜在包冲突..."
-
-# 查找可能的重复文件
-find ./feeds/packages -name "*.conflict" -type f -delete 2>/dev/null || true
+echo "✅ 已设置 Web 跳转到 web-control"
 
 echo "=========================================="
 echo "✅ post-feeds 脚本执行完成"
@@ -270,11 +279,19 @@ EOF
 
 chmod +x $GITHUB_WORKSPACE/post-feeds.sh
 
-# ===== 12. 修改 .config 确保 transmission-web-control 被禁用 =====
-echo "🔧 确保 transmission-web-control 被禁用..."
+# ===== 12. 修改 .config 确保 transmission-web 被禁用，web-control 启用 =====
+echo "🔧 配置 Transmission 包选择..."
 cat >> .config <<'EOF'
-# 禁用 transmission-web-control 避免冲突
-# CONFIG_PACKAGE_transmission-web-control is not set
+# 禁用自带的 transmission-web
+# CONFIG_PACKAGE_transmission-web is not set
+
+# 启用 web-control 美化版
+CONFIG_PACKAGE_transmission-web-control=y
+
+# 确保其他 Transmission 组件正常
+CONFIG_PACKAGE_transmission-daemon=y
+CONFIG_PACKAGE_luci-app-transmission=y
+CONFIG_PACKAGE_luci-i18n-transmission-zh-cn=y
 EOF
 
 # ===== 13. 生成配置 =====
@@ -289,6 +306,6 @@ echo "   - 默认IP: 192.168.100.254"
 echo "   - 防火墙: 老版 iptables"
 echo "   - USB挂载: /mnt/usb_disk"
 echo "   - 文件共享: ksmbd + vsftpd"
-echo "   - 下载服务: Transmission (已处理包冲突)"
+echo "   - 下载服务: Transmission (web-control美化版)"
 echo "   - 美化主题: kucat"
 echo "=========================================="
