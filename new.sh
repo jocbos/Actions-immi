@@ -2,7 +2,7 @@
 # XG-040G-MD 老楼版 DIY脚本
 # 功能: mwan3 + smartdns + zerotier + homeproxy + ksmbd + vsftpd + transmission + upnp
 # 方案: 保留 transmission-web-control，删除自带的 transmission-web
-# NPU固件: 已通过 airoha-en7581-npu-firmware 包集成，无需手动添加
+# 修复: 修复 luci-app-transmission 和 transmission-web-control 的依赖问题
 
 # ===== 1. 添加软件源 =====
 sed -i '/kenzo/d' feeds.conf.default 2>/dev/null || true
@@ -231,11 +231,11 @@ NPU固件已通过 airoha-en7581-npu-firmware 包集成。
 这通常表示内核驱动需要更新或设备树需要调整。
 EOF
 
-# ===== 12. 创建 post-feeds 脚本（保留 web-control，删除 web）=====
+# ===== 12. 创建 post-feeds 脚本（修复版，含依赖修复）=====
 cat > $GITHUB_WORKSPACE/post-feeds.sh <<'EOF'
 #!/bin/bash
 echo "=========================================="
-echo "运行 post-feeds 脚本 - 保留 web-control"
+echo "运行 post-feeds 脚本 - 保留 web-control + 修复依赖"
 echo "=========================================="
 
 # 1. 修改默认主题为 kucat
@@ -267,7 +267,84 @@ else
     echo "⚠️ transmission-web-control 不存在，尝试从 kenzo 源获取"
 fi
 
-# 4. 删除所有对 transmission-web 的引用（但保留 web-control）
+# 4. 修复 luci-app-transmission 的依赖问题
+echo "🔧 修复 luci-app-transmission 的依赖..."
+LUCI_TRANSMISSION_MAKEFILE="feeds/luci/applications/luci-app-transmission/Makefile"
+if [ -f "$LUCI_TRANSMISSION_MAKEFILE" ]; then
+    # 备份原文件
+    cp "$LUCI_TRANSMISSION_MAKEFILE" "$LUCI_TRANSMISSION_MAKEFILE.bak"
+    
+    # 删除对不存在包的依赖
+    sed -i '/DEPENDS.*transmission-daemon/d' "$LUCI_TRANSMISSION_MAKEFILE"
+    sed -i '/DEPENDS.*transmission-cli/d' "$LUCI_TRANSMISSION_MAKEFILE"
+    sed -i '/DEPENDS.*transmission-remote/d' "$LUCI_TRANSMISSION_MAKEFILE"
+    
+    # 确保依赖 openssl 版本
+    if ! grep -q "transmission-daemon-openssl" "$LUCI_TRANSMISSION_MAKEFILE"; then
+        # 在 PKG_RELEASE 后添加依赖
+        sed -i '/PKG_RELEASE:=/a DEPENDS:=+transmission-daemon-openssl' "$LUCI_TRANSMISSION_MAKEFILE"
+    fi
+    
+    echo "✅ luci-app-transmission 依赖已修复"
+else
+    echo "⚠️ luci-app-transmission Makefile 不存在，跳过"
+fi
+
+# 5. 修复 transmission-web-control 的依赖问题
+echo "🔧 修复 transmission-web-control 的依赖..."
+WEB_CONTROL_MAKEFILE="feeds/packages/net/transmission-web-control/Makefile"
+if [ -f "$WEB_CONTROL_MAKEFILE" ]; then
+    # 备份原文件
+    cp "$WEB_CONTROL_MAKEFILE" "$WEB_CONTROL_MAKEFILE.bak"
+    
+    # 删除对不存在包的依赖
+    sed -i '/DEPENDS.*transmission-daemon/d' "$WEB_CONTROL_MAKEFILE"
+    
+    # 添加 openssl 依赖
+    if grep -q "DEPENDS:=" "$WEB_CONTROL_MAKEFILE"; then
+        sed -i 's/DEPENDS:=/DEPENDS:=+transmission-daemon-openssl /' "$WEB_CONTROL_MAKEFILE"
+    else
+        sed -i '/PKG_RELEASE:=/a DEPENDS:=+transmission-daemon-openssl' "$WEB_CONTROL_MAKEFILE"
+    fi
+    
+    echo "✅ transmission-web-control 依赖已修复"
+else
+    echo "⚠️ transmission-web-control Makefile 不存在，跳过"
+fi
+
+# 6. 检查 Transmission 核心包的 Makefile
+echo "🔧 检查 Transmission 核心包..."
+TRANSMISSION_CORE_MAKEFILE="feeds/packages/net/transmission/Makefile"
+if [ -f "$TRANSMISSION_CORE_MAKEFILE" ]; then
+    # 备份原文件
+    cp "$TRANSMISSION_CORE_MAKEFILE" "$TRANSMISSION_CORE_MAKEFILE.bak"
+    
+    # 确保 openssl 变体被正确定义
+    if ! grep -q "Package/transmission-daemon-openssl" "$TRANSMISSION_CORE_MAKEFILE"; then
+        echo "⚠️ transmission-daemon-openssl 未定义，添加定义..."
+        # 在文件末尾添加 openssl 变体定义
+        cat >> "$TRANSMISSION_CORE_MAKEFILE" << 'INNEREOF'
+
+define Package/transmission-daemon-openssl
+$(call Package/transmission/Default)
+  TITLE:=Transmission daemon with OpenSSL
+  VARIANT:=openssl
+  DEPENDS:=+libopenssl +libpthread +libcurl +libnatpmp +libminiupnpc +libevent2
+endef
+
+define Package/transmission-daemon-openssl/description
+Transmission is a simple BitTorrent client.
+This package contains the daemon with OpenSSL support.
+endef
+
+$(eval $(call BuildPackage,transmission-daemon-openssl))
+INNEREOF
+        echo "✅ transmission-daemon-openssl 定义已添加"
+    fi
+    echo "✅ Transmission 核心包检查完成"
+fi
+
+# 7. 删除所有对 transmission-web 的引用
 echo "🔧 清理 Makefile 中的引用..."
 find ./feeds -name "Makefile" -exec grep -l "transmission-web" {} \; | while read file; do
     if ! grep -q "transmission-web-control" "$file"; then
@@ -276,7 +353,7 @@ find ./feeds -name "Makefile" -exec grep -l "transmission-web" {} \; | while rea
     fi
 done
 
-# 5. 确保 transmission 的 Web 目录指向 web-control
+# 8. 确保 transmission 的 Web 目录指向 web-control
 mkdir -p files/usr/share/transmission
 cat > files/usr/share/transmission/index.html <<'INNEREOF'
 <!DOCTYPE html>
@@ -295,6 +372,12 @@ echo "✅ 已设置 Web 跳转到 web-control"
 echo "=========================================="
 echo "✅ post-feeds 脚本执行完成"
 echo "=========================================="
+echo "📋 修复内容："
+echo "   - 删除 luci-app-transmission 的错误依赖"
+echo "   - 删除 transmission-web-control 的错误依赖"
+echo "   - 确保依赖 openssl 版本"
+echo "   - 添加 transmission-daemon-openssl 定义（如需）"
+echo "=========================================="
 EOF
 
 chmod +x $GITHUB_WORKSPACE/post-feeds.sh
@@ -309,7 +392,7 @@ XG-040G-MD 老楼版
 - 防火墙: 老版 iptables
 - 网络核心: mwan3 + SmartDNS + ZeroTier + HomeProxy + UPnP
 - 文件共享: ksmbd (SMB) + vsftpd (FTP)
-- 下载服务: Transmission (web-control 美化版)
+- 下载服务: Transmission (web-control 美化版，依赖已修复)
 - 网络加速: Shortcut-FE + BBR + NPU硬件加速
 - 美化主题: kucat + advancedplus
 
@@ -338,10 +421,14 @@ echo "=========================================="
 echo "📋 配置摘要："
 echo "   - 默认IP: 192.168.100.254"
 echo "   - 防火墙: 老版 iptables"
-echo "   - 新增功能: UPnP (游戏/P2P自动端口映射)"
+echo "   - UPnP: 已启用"
 echo "   - USB挂载: /mnt/usb_disk"
 echo "   - 文件共享: ksmbd + vsftpd"
-echo "   - 下载服务: Transmission (web-control美化版)"
+echo "   - 下载服务: Transmission (依赖已修复)"
 echo "   - 美化主题: kucat"
-echo "   - NPU固件: 已通过包集成 (无需手动添加)"
+echo "   - NPU固件: 已通过包集成"
+echo "=========================================="
+echo "⚠️ 重要提示："
+echo "   - 已添加 Transmission 依赖修复"
+echo "   - 在 workflow 中 feeds install 后会自动运行 post-feeds.sh"
 echo "=========================================="
