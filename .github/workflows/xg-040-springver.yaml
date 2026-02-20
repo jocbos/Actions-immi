@@ -9,11 +9,7 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [main, master]
-    paths:
-      - 'config/**'
-      - 'diy.sh'
+  
 
 env:
   CONFIG_FILE: 'config/gateway1.config'
