@@ -1,0 +1,236 @@
+name: Build XG-040G-MD 小楼版
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: '🔧 SSH调试模式'
+        required: false
+        default: false
+        type: boolean
+      log_switch:
+        description: '📝 详细编译日志'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main, master]
+    paths:
+      - 'config/**'
+      - 'new.sh'
+      - 'post-feeds.sh'
+
+env:
+  CONFIG_FILE: 'config/new.config'
+  DIY_SCRIPT: new.sh
+  REPO_URL: https://github.com/bingoguo93/immortalwrt
+  REPO_BRANCH: openwrt-25.12
+  TZ: Asia/Shanghai
+  UPLOAD_RELEASE: true
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 清理磁盘空间
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        large-packages: true
+
+    - name: 安装依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential clang flex bison g++ gawk \
+        gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+        python3 python3-setuptools rsync unzip zlib1g-dev file wget pigz ccache
+
+    - name: 克隆源码
+      run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+
+    - name: 创建缓存目录
+      run: |
+        sudo mkdir -p /mnt/openwrt/{dl,ccache}
+        sudo chown -R $USER:$GROUPS /mnt/openwrt
+        ln -sfn /mnt/openwrt/dl openwrt/dl
+        
+    - name: 配置ccache
+      run: |
+        mkdir -p ~/.ccache
+        ccache -M 5G
+        echo 'export PATH="/usr/lib/ccache:$PATH"' >> ~/.bashrc
+
+    - name: 恢复dl缓存
+      uses: actions/cache@v4
+      with:
+        path: /mnt/openwrt/dl
+        key: ${{ runner.os }}-immortalwrt-dl-${{ hashFiles('feeds.conf.default') }}
+        restore-keys: |
+          ${{ runner.os }}-immortalwrt-dl-
+
+    - name: 运行DIY脚本
+      run: |
+        chmod +x $DIY_SCRIPT
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_SCRIPT
+
+    - name: 更新feeds
+      working-directory: ./openwrt
+      run: |
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+    - name: 运行post-feeds脚本
+      working-directory: ./openwrt
+      run: |
+        chmod +x $GITHUB_WORKSPACE/post-feeds.sh
+        $GITHUB_WORKSPACE/post-feeds.sh
+
+    - name: 应用配置
+      run: |
+        cp -f "${CONFIG_FILE}" openwrt/.config
+        cd openwrt && make defconfig
+
+    - name: 下载源码包
+      working-directory: ./openwrt
+      run: make download -j8 || make download -j1 V=s
+
+    - name: 编译固件
+      working-directory: ./openwrt
+      run: |
+        START_TIME=$(date +%s)
+        if [[ "${{ github.event.inputs.log_switch }}" == "true" ]]; then
+            echo "🔍 使用详细日志模式编译"
+            make -j1 V=s
+        else
+            echo "🚀 使用并行模式编译"
+            make -j$(nproc)
+        fi
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: 识别设备名称
+      working-directory: ./openwrt
+      run: |
+        DEVICE=$(grep 'CONFIG_TARGET.*DEVICE.*=y' .config | head -1 | sed 's/.*DEVICE_\(.*\)=y/\1/')
+        echo "DEVICE_NAME=$DEVICE" >> $GITHUB_ENV
+        echo "RELEASE_TAG=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+
+    - name: 整理固件
+      id: organize
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "✅ 固件生成在: $PWD"
+        ls -la
+        
+        # 获取固件文件名
+        FW_FILE=$(ls *.bin | head -1)
+        echo "FW_FILE=$FW_FILE" >> $GITHUB_ENV
+        echo "FW_PATH=$PWD/$FW_FILE" >> $GITHUB_ENV
+
+    - name: 生成Release信息
+      id: release_info
+      run: |
+        # 获取编译时间
+        BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+        
+        # 创建Release说明
+        cat > release.md <<EOF
+        ## 🚀 XG-040G-MD 小楼版固件
+        
+        **编译时间**: $BUILD_TIME
+        **设备型号**: XG-040G-MD
+        **源码仓库**: $REPO_URL
+        **分支**: $REPO_BRANCH
+        
+        ### ✨ 功能特性
+        - 防火墙: 老版 iptables
+        - 网络核心: mwan3 + SmartDNS + ZeroTier + HomeProxy + UPnP
+        - 文件共享: ksmbd (SMB) + vsftpd (FTP)
+        - 下载服务: Transmission (web-control 美化版)
+        - 网络加速: Shortcut-FE + BBR + NPU硬件加速
+        - 美化主题: kucat + advancedplus
+        
+        ### 📦 包含的软件包
+        \`\`\`
+        $(cat openwrt/.config | grep -E '^CONFIG_PACKAGE_.*=y' | sed 's/CONFIG_PACKAGE_//g; s/=y//g' | head -20)
+        ...
+        \`\`\`
+        
+        ### 📥 下载
+        - 固件文件: \`${{ env.FW_FILE }}\`
+        - 文件大小: $(du -h ${{ env.FW_PATH }} | cut -f1)
+        
+        ### 🔧 刷机说明
+        1. 进入 U-Boot（指示灯闪烁5次时访问 http://192.168.1.1）
+        2. 选择本固件文件上传
+        3. 等待刷写完成自动重启
+        4. 默认IP: 192.168.100.254
+        
+        ### ⚠️ 注意事项
+        - 首次启动较慢，请耐心等待2-3分钟
+        - 建议不保留配置刷入
+        - 刷机有风险，请备份原厂固件
+        EOF
+        
+        echo "✅ Release信息生成完毕"
+
+    - name: 上传固件到Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: XG-040G-MD_小楼版_${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}/*.bin
+        retention-days: 90  # Artifact保留90天
+
+    - name: 创建GitHub Release
+      id: create_release
+      if: env.UPLOAD_RELEASE == 'true'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: XG-040G-MD_${{ env.RELEASE_TAG }}
+        name: XG-040G-MD 小楼版 ${{ env.RELEASE_TAG }}
+        body_path: release.md
+        files: |
+          ${{ env.FIRMWARE }}/*.bin
+          openwrt/.config
+        draft: false
+        prerelease: false
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 上传.config配置文件
+      if: env.UPLOAD_RELEASE == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-config-${{ env.RELEASE_TAG }}
+        path: |
+          config/gateway1.config
+          openwrt/.config
+          openwrt/feeds.conf.default
+
+    - name: 清理旧Releases
+      uses: dev-drprasad/delete-older-releases@v0.2.1
+      with:
+        keep_latest: 5  # 保留最近5个Release
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 清理旧Artifacts
+      uses: c-hive/gha-remove-artifacts@v1
+      with:
+        age: '30 days'  # 删除30天前的Artifact
+        skip-recent: 5  # 保留最近5个
