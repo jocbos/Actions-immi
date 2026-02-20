@@ -17,7 +17,7 @@ on:
     branches: [main, master]
     paths:
       - 'config/**'
-      - 'diy-gateway1.sh'
+      - 'new.sh'
       - 'post-feeds.sh'
 
 env:
