@@ -212,7 +212,7 @@ jobs:
       with:
         name: build-config-${{ env.RELEASE_TAG }}
         path: |
-          config/gateway1.config
+          config/new.config
           openwrt/.config
           openwrt/feeds.conf.default
 
