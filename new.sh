@@ -30,7 +30,7 @@ src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main
 
 # kenzok8 源（使用 small-package 替代 small）
 src-git kenzo https://github.com/kenzok8/openwrt-packages.git;master
-src-git small-package https://github.com/kenzok8/small-package.git;main
+src-git small_package https://github.com/kenzok8/small-package.git;master
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
