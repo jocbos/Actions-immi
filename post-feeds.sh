@@ -49,8 +49,11 @@ fi
 # ===== 5. 重新生成 LuCI 索引 =====
 echo "重新生成 LuCI 索引..."
 if [ -d "feeds/luci" ]; then
-    (cd feeds/luci && ./contrib/package/luci.mk)
+    # 使用 feeds 命令重建索引
+    ./scripts/feeds update -i
     echo "✅ LuCI 索引生成完成"
+else
+    echo "⚠️ feeds/luci 目录不存在，跳过索引生成"
 fi
 
 # ===== 6. 确保 iptables 模块完整 =====
