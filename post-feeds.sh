@@ -123,24 +123,7 @@ nf_conntrack_ipv4
 nf_nat
 EOF
 
-# 创建 USB 自动挂载脚本
-mkdir -p files/etc/hotplug.d/block
-cat > files/etc/hotplug.d/block/10-automount << 'EOF'
-#!/bin/sh
-case "$ACTION" in
-    add)
-        for i in /sys/block/*/device; do
-            device="$(basename "$(dirname "$(dirname "$i")")")"
-            if [ ! -d "/mnt/$device" ] && [ -b "/dev/$device" ]; then
-                mkdir -p "/mnt/$device"
-                mount "/dev/$device" "/mnt/$device" 2>/dev/null && \
-                    logger "USB 设备已自动挂载到 /mnt/$device"
-            fi
-        done
-        ;;
-esac
-EOF
-chmod +x files/etc/hotplug.d/block/10-automount
+
 
 echo "✅ 依赖检查完成"
 
