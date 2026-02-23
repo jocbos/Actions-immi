@@ -1,6 +1,6 @@
 #!/bin/bash
 # new.sh - XG-040G-MD 小楼版预配置脚本
-# 使用 small-package 替代 small 源
+# 只保留 small_package 源 + Go 修复
 
 set -e
 
@@ -15,7 +15,7 @@ if [ -f "feeds.conf.default" ]; then
     echo "✅ 已备份原 feeds.conf.default"
 fi
 
-# ===== 2. 创建全新的 feeds.conf.default（使用 small-package）=====
+# ===== 2. 创建全新的 feeds.conf.default（只保留 small_package）=====
 echo "创建新的 feeds.conf.default..."
 cat > feeds.conf.default << 'EOF'
 # ImmortalWrt 官方源
@@ -24,13 +24,13 @@ src-git luci https://git.immortalwrt.org/immortalwrt/luci.git
 src-git routing https://git.immortalwrt.org/routing/packages.git
 src-git telephony https://git.immortalwrt.org/telephony/telephony.git
 
-# PassWall 官方源
-src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
-src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main
-
-# kenzok8 源（使用 small-package 替代 small）
-src-git kenzo https://github.com/kenzok8/openwrt-packages.git;master
+# 只保留 small_package 源（包含 PassWall 和常用包）
 src-git small_package https://github.com/kenzok8/small-package.git;master
+
+# 注释掉可能有问题的源
+# src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
+# src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main
+# src-git kenzo https://github.com/kenzok8/openwrt-packages.git;master
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
