@@ -18,7 +18,7 @@ echo "安装 PassWall 相关包..."
 ./scripts/feeds install -a -p passwall_packages
 ./scripts/feeds install -a -p kenzo
 # 用 small-package 替代 small
-./scripts/feeds install -a -p small-package
+./scripts/feeds install -a -p small_package
 echo "✅ PassWall 包安装完成"
 
 # ===== 2. 修复 vsftpd-alt 权限 =====
