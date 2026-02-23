@@ -18,11 +18,11 @@ fi
 # ===== 2. 创建全新的 feeds.conf.default（只保留官方源）=====
 echo "创建新的 feeds.conf.default..."
 cat > feeds.conf.default << 'EOF'
-# ImmortalWrt 官方源
-src-git packages https://git.immortalwrt.org/immortalwrt/packages.git
-src-git luci https://git.immortalwrt.org/immortalwrt/luci.git
-src-git routing https://git.immortalwrt.org/routing/packages.git
-src-git telephony https://git.immortalwrt.org/telephony/telephony.git
+# ImmortalWrt 官方源（使用国内镜像）
+src-git packages https://github.com/immortalwrt/packages.git
+src-git luci https://github.com/immortalwrt/luci.git
+src-git routing https://github.com/immortalwrt/routing.git
+src-git telephony https://github.com/immortalwrt/telephony.git
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
