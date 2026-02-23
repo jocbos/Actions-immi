@@ -7,9 +7,13 @@ set -e
 echo "========================================="
 echo "开始执行 post-feeds.sh 后配置脚本"
 echo "========================================="
+echo "当前目录: $(pwd)"
 
-# 进入 openwrt 目录
-cd openwrt || exit 1
+# 检查是否在 openwrt 目录中
+if [[ "$(basename "$PWD")" != "openwrt" ]]; then
+    echo "错误: 不在 openwrt 目录中"
+    exit 1
+fi
 
 # ===== 1. 安装 feeds =====
 echo "安装 feeds..."
