@@ -80,10 +80,30 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SCRIPT
 
-    - name: 更新feeds
+    - name: Update & Install feeds
       working-directory: ./openwrt
       run: |
-        ./scripts/feeds update -a
+        echo "当前 feeds.conf.default 内容："
+        cat feeds.conf.default
+    
+         echo "测试网络连接..."
+        ping -c 3 github.com || true
+        ping -c 3 git.immortalwrt.org || true
+    
+        echo "开始更新 feeds（带详细输出）..."
+        ./scripts/feeds update -a -v
+    
+        # 检查是否下载成功
+        echo "检查下载的 feeds："
+        ls -la feeds/ || true
+    
+        if [ ! -d "feeds/packages" ]; then
+           echo "第一次更新失败，等待10秒后重试..."
+        sleep 10
+        ./scripts/feeds update -a -v
+        fi
+    
+        # 安装 feeds
         ./scripts/feeds install -a
 
     - name: 运行post-feeds脚本
