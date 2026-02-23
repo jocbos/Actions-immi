@@ -1,7 +1,7 @@
 #!/bin/bash
 # post-feeds.sh - XG-040G-MD 小楼版后配置脚本
 # 适用于 immortalwrt 25.12 分支
-# 执行时机: feeds 更新后
+# 修改: 使用 small-package 替代 small
 
 set -e  # 出错立即退出
 
@@ -17,7 +17,8 @@ echo "安装 PassWall 相关包..."
 ./scripts/feeds install -a -p passwall_luci
 ./scripts/feeds install -a -p passwall_packages
 ./scripts/feeds install -a -p kenzo
-./scripts/feeds install -a -p small
+# 用 small-package 替代 small
+./scripts/feeds install -a -p small-package
 echo "✅ PassWall 包安装完成"
 
 # ===== 2. 修复 vsftpd-alt 权限 =====
@@ -43,7 +44,16 @@ if [ -d "feeds/luci/applications/luci-app-homeproxy" ]; then
     echo "✅ homeproxy 权限修复完成"
 fi
 
-# ===== 5. 创建 NPU 开机自启脚本 =====
+# ===== 5. 修复 small-package 中包的权限 =====
+echo "修复 small-package 中包的权限..."
+find feeds/small-package -name "luci-app-*" -type d 2>/dev/null | while read dir; do
+    if [ -d "$dir/root/etc/uci-defaults" ]; then
+        chmod -R 755 "$dir/root/etc/uci-defaults/"
+        echo "  ✅ 修复: $(basename $dir)"
+    fi
+done
+
+# ===== 6. 创建 NPU 开机自启脚本 =====
 echo "创建 NPU 开机自启脚本..."
 cat > files/etc/init.d/npu-optimize << 'EOF'
 #!/bin/sh /etc/rc.common
@@ -82,7 +92,7 @@ EOF
 chmod +x files/etc/init.d/npu-optimize
 echo "✅ NPU 开机脚本创建完成"
 
-# ===== 6. 修复主题权限 =====
+# ===== 7. 修复主题权限 =====
 echo "修复主题权限..."
 if [ -d "feeds/luci/themes/luci-theme-argon" ]; then
     chmod -R 755 feeds/luci/themes/luci-theme-argon/root/etc/uci-defaults/
@@ -94,14 +104,14 @@ if [ -d "feeds/luci/applications/luci-app-advancedplus" ]; then
     echo "✅ advancedplus 权限修复完成"
 fi
 
-# ===== 7. 重新生成 LuCI 索引 =====
+# ===== 8. 重新生成 LuCI 索引 =====
 echo "重新生成 LuCI 索引..."
 if [ -d "feeds/luci" ]; then
     (cd feeds/luci && ./contrib/package/luci.mk)
     echo "✅ LuCI 索引生成完成"
 fi
 
-# ===== 8. 检查并创建缺失的依赖 =====
+# ===== 9. 检查并创建缺失的依赖 =====
 echo "检查并创建缺失的依赖..."
 
 # 确保 iptables 模块完整
@@ -134,10 +144,14 @@ chmod +x files/etc/hotplug.d/block/10-automount
 
 echo "✅ 依赖检查完成"
 
+# ===== 10. 移除旧的 small 源引用（如果有）=====
+echo "清理旧的 small 源引用..."
+sed -i 's/CONFIG_PACKAGE_.*from-small.*//g' .config 2>/dev/null || true
+
 echo "========================================="
 echo "post-feeds.sh 后配置脚本执行完成！"
 echo "========================================="
 
 # 显示安装状态
 echo "已安装的 feeds 列表："
-./scripts/feeds list | grep -E "passwall|kenzo|small|homeproxy" || true
+./scripts/feeds list | grep -E "passwall|kenzo|small-package|homeproxy" || true
