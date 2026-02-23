@@ -22,7 +22,7 @@ cat > feeds.conf.default << 'EOF'
 src-git packages https://github.com/immortalwrt/packages.git
 src-git luci https://github.com/immortalwrt/luci.git
 src-git routing https://github.com/immortalwrt/routing.git
-src-git telephony https://github.com/immortalwrt/telephony.git
+# src-git telephony https://github.com/immortalwrt/telephony.git
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
