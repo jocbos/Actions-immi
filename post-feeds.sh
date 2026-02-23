@@ -1,9 +1,8 @@
 #!/bin/bash
 # post-feeds.sh - XG-040G-MD 小楼版后配置脚本
-# 适用于 immortalwrt 25.12 分支
-# 修改: 使用 small-package 替代 small
+# 包含 Go 语言修复
 
-set -e  # 出错立即退出
+set -e
 
 echo "========================================="
 echo "开始执行 post-feeds.sh 后配置脚本"
@@ -12,85 +11,48 @@ echo "========================================="
 # 进入 openwrt 目录
 cd openwrt || exit 1
 
-# ===== 1. 安装 PassWall 相关包 =====
-echo "安装 PassWall 相关包..."
-./scripts/feeds install -a -p passwall_luci
-./scripts/feeds install -a -p passwall_packages
-./scripts/feeds install -a -p kenzo
-# 用 small-package 替代 small
-./scripts/feeds install -a -p small_package
-echo "✅ PassWall 包安装完成"
+# ===== 1. 修复 Go 语言版本（解决 Makefile 错误）=====
+echo "升级 Go 语言版本..."
+if [ -d "feeds/packages/lang/golang" ]; then
+    rm -rf feeds/packages/lang/golang
+fi
+git clone --depth 1 https://github.com/sbwml/packages_lang_golang -b 22.x feeds/packages/lang/golang
+echo "✅ Go 版本升级完成"
 
-# ===== 2. 修复 vsftpd-alt 权限 =====
+# ===== 2. 安装 small_package 的包 =====
+echo "安装 small_package 的包..."
+./scripts/feeds install -a -p small_package
+echo "✅ small_package 包安装完成"
+
+# ===== 3. 修复 vsftpd-alt 权限 =====
 echo "修复 vsftpd-alt 权限..."
 if [ -d "feeds/luci/applications/luci-app-vsftpd-alt" ]; then
     chmod -R 755 feeds/luci/applications/luci-app-vsftpd-alt/root/etc/uci-defaults/
     echo "✅ vsftpd-alt 权限修复完成"
-else
-    echo "⚠️ luci-app-vsftpd-alt 未找到，跳过权限修复"
 fi
 
-# ===== 3. 修复 PassWall 权限 =====
+# ===== 4. 修复 PassWall 权限 =====
 echo "修复 PassWall 权限..."
 if [ -d "feeds/luci/applications/luci-app-passwall" ]; then
     chmod -R 755 feeds/luci/applications/luci-app-passwall/root/etc/uci-defaults/
     echo "✅ PassWall 权限修复完成"
 fi
 
-# ===== 4. 修复 homeproxy 权限 =====
+# ===== 5. 修复 homeproxy 权限 =====
 echo "修复 homeproxy 权限..."
 if [ -d "feeds/luci/applications/luci-app-homeproxy" ]; then
     chmod -R 755 feeds/luci/applications/luci-app-homeproxy/root/etc/uci-defaults/
     echo "✅ homeproxy 权限修复完成"
 fi
 
-# ===== 5. 修复 small-package 中包的权限 =====
-echo "修复 small-package 中包的权限..."
-find feeds/small-package -name "luci-app-*" -type d 2>/dev/null | while read dir; do
+# ===== 6. 修复 small_package 中包的权限 =====
+echo "修复 small_package 中包的权限..."
+find feeds/small_package -name "luci-app-*" -type d 2>/dev/null | while read dir; do
     if [ -d "$dir/root/etc/uci-defaults" ]; then
         chmod -R 755 "$dir/root/etc/uci-defaults/"
         echo "  ✅ 修复: $(basename $dir)"
     fi
 done
-
-# ===== 6. 创建 NPU 开机自启脚本 =====
-echo "创建 NPU 开机自启脚本..."
-cat > files/etc/init.d/npu-optimize << 'EOF'
-#!/bin/sh /etc/rc.common
-# Airoha EN7581 NPU 优化脚本
-
-START=98
-STOP=20
-
-start() {
-    echo "启动 Airoha EN7581 NPU 优化..."
-    
-    # 等待系统完全启动
-    sleep 3
-    
-    # 启用 NPU 硬件加速
-    if [ -f "/proc/airoha/npu/enable" ]; then
-        echo 1 > /proc/airoha/npu/enable 2>/dev/null && echo "  ✓ NPU 加速已启用"
-    fi
-    
-    # 启用硬件 NAT
-    if [ -f "/proc/airoha/hnat/enable" ]; then
-        echo 1 > /proc/airoha/hnat/enable 2>/dev/null && echo "  ✓ 硬件 NAT 已启用"
-    fi
-    
-    # CPU 性能模式
-    echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || true
-    
-    echo "NPU 优化完成"
-}
-
-stop() {
-    echo powersave > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || true
-    echo 0 > /proc/airoha/npu/enable 2>/dev/null || true
-}
-EOF
-chmod +x files/etc/init.d/npu-optimize
-echo "✅ NPU 开机脚本创建完成"
 
 # ===== 7. 修复主题权限 =====
 echo "修复主题权限..."
@@ -111,10 +73,8 @@ if [ -d "feeds/luci" ]; then
     echo "✅ LuCI 索引生成完成"
 fi
 
-# ===== 9. 检查并创建缺失的依赖 =====
+# ===== 9. 确保 iptables 模块完整 =====
 echo "检查并创建缺失的依赖..."
-
-# 确保 iptables 模块完整
 mkdir -p files/etc/modules.d
 cat > files/etc/modules.d/20-iptables-extra << 'EOF'
 # 额外 iptables 模块
@@ -122,14 +82,7 @@ nf_conntrack
 nf_conntrack_ipv4
 nf_nat
 EOF
-
-
-
 echo "✅ 依赖检查完成"
-
-# ===== 10. 移除旧的 small 源引用（如果有）=====
-echo "清理旧的 small 源引用..."
-sed -i 's/CONFIG_PACKAGE_.*from-small.*//g' .config 2>/dev/null || true
 
 echo "========================================="
 echo "post-feeds.sh 后配置脚本执行完成！"
@@ -137,4 +90,4 @@ echo "========================================="
 
 # 显示安装状态
 echo "已安装的 feeds 列表："
-./scripts/feeds list | grep -E "passwall|kenzo|small-package|homeproxy" || true
+./scripts/feeds list | grep -E "small_package|homeproxy" || true
