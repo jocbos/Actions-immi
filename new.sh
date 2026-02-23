@@ -12,22 +12,10 @@ echo "当前目录: $(pwd)"
 echo "列出当前目录内容:"
 ls -la
 
-# ===== 1. 检查 openwrt 目录是否存在 =====
-if [ ! -d "openwrt" ]; then
-    echo "❌ 错误: openwrt 目录不存在！"
-    echo "当前目录内容:"
-    ls -la
-    exit 1
-fi
-
-echo "✅ 找到 openwrt 目录"
-echo "openwrt 目录内容:"
-ls -la openwrt/
-
-# ===== 2. 添加第三方软件源 =====
+# ===== 1. 添加第三方软件源 =====
 echo "添加第三方软件源..."
 
-cat >> openwrt/feeds.conf.default <<EOF
+cat >> feeds.conf.default <<EOF
 
 # PassWall 官方源
 src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
@@ -44,22 +32,22 @@ EOF
 
 echo "✅ 软件源添加完成"
 echo "feeds.conf.default 内容:"
-cat openwrt/feeds.conf.default
+cat feeds.conf.default
 
-# ===== 3. 创建自定义文件目录 =====
+# ===== 2. 创建自定义文件目录 =====
 echo "创建自定义文件目录..."
-mkdir -p openwrt/files/etc/uci-defaults
-mkdir -p openwrt/files/etc/init.d
-mkdir -p openwrt/files/etc/sysctl.d
-mkdir -p openwrt/files/etc/modules.d
-mkdir -p openwrt/files/etc/hotplug.d/block
-mkdir -p openwrt/files/etc/ppp
-mkdir -p openwrt/files/root
+mkdir -p files/etc/uci-defaults
+mkdir -p files/etc/init.d
+mkdir -p files/etc/sysctl.d
+mkdir -p files/etc/modules.d
+mkdir -p files/etc/hotplug.d/block
+mkdir -p files/etc/ppp
+mkdir -p files/root
 echo "✅ 目录创建完成"
 
-# ===== 4. 设置默认IP地址 =====
+# ===== 3. 设置默认IP地址 =====
 echo "设置默认IP为 192.168.100.254..."
-cat > openwrt/files/etc/uci-defaults/99-ip-set << 'EOF'
+cat > files/etc/uci-defaults/99-ip-set << 'EOF'
 #!/bin/sh
 # 设置默认IP
 uci set network.lan.ipaddr='192.168.100.254'
@@ -78,21 +66,21 @@ uci commit luci
 
 exit 0
 EOF
-chmod +x openwrt/files/etc/uci-defaults/99-ip-set
+chmod +x files/etc/uci-defaults/99-ip-set
 echo "✅ 默认IP设置完成"
 
-# ===== 5. 创建 NPU 驱动加载配置 =====
+# ===== 4. 创建 NPU 驱动加载配置 =====
 echo "配置 NPU 驱动加载..."
-cat > openwrt/files/etc/modules.d/10-airoha-npu << 'EOF'
+cat > files/etc/modules.d/10-airoha-npu << 'EOF'
 # Airoha EN7581 NPU 驱动
 mtk_hnat
 mtk_npu
 EOF
 echo "✅ NPU 配置完成"
 
-# ===== 6. 创建系统优化配置 =====
+# ===== 5. 创建系统优化配置 =====
 echo "创建系统优化配置..."
-cat > openwrt/files/etc/sysctl.d/99-optimize.conf << 'EOF'
+cat > files/etc/sysctl.d/99-optimize.conf << 'EOF'
 # 网络优化
 net.core.rmem_max = 262144
 net.core.wmem_max = 262144
@@ -109,9 +97,9 @@ vm.vfs_cache_pressure=50
 EOF
 echo "✅ 系统优化配置完成"
 
-# ===== 7. 创建 vsftpd 默认配置 =====
+# ===== 6. 创建 vsftpd 默认配置 =====
 echo "创建 vsftpd 默认配置..."
-cat > openwrt/files/etc/vsftpd.conf << 'EOF'
+cat > files/etc/vsftpd.conf << 'EOF'
 # 基本设置
 anonymous_enable=NO
 local_enable=YES
@@ -134,9 +122,9 @@ pasv_max_port=31000
 EOF
 echo "✅ vsftpd 配置完成"
 
-# ===== 8. 创建 USB 自动挂载脚本 =====
+# ===== 7. 创建 USB 自动挂载脚本 =====
 echo "创建 USB 自动挂载脚本..."
-cat > openwrt/files/etc/hotplug.d/block/10-automount << 'EOF'
+cat > files/etc/hotplug.d/block/10-automount << 'EOF'
 #!/bin/sh
 case "$ACTION" in
     add)
@@ -151,29 +139,29 @@ case "$ACTION" in
         ;;
 esac
 EOF
-chmod +x openwrt/files/etc/hotplug.d/block/10-automount
+chmod +x files/etc/hotplug.d/block/10-automount
 echo "✅ USB 自动挂载脚本完成"
 
-# ===== 9. 创建 PPPoE 自动重连脚本 =====
+# ===== 8. 创建 PPPoE 自动重连脚本 =====
 echo "创建 PPPoE 自动重连脚本..."
-cat > openwrt/files/etc/ppp/ip-up << 'EOF'
+cat > files/etc/ppp/ip-up << 'EOF'
 #!/bin/sh
 # PPPoE 连接成功时执行
 logger "PPPoE 连接成功，IP: $4"
 EOF
-chmod +x openwrt/files/etc/ppp/ip-up
+chmod +x files/etc/ppp/ip-up
 
-cat > openwrt/files/etc/ppp/ip-down << 'EOF'
+cat > files/etc/ppp/ip-down << 'EOF'
 #!/bin/sh
 # PPPoE 断开时执行
 logger "PPPoE 连接断开"
 EOF
-chmod +x openwrt/files/etc/ppp/ip-down
+chmod +x files/etc/ppp/ip-down
 echo "✅ PPPoE 脚本完成"
 
-# ===== 10. 创建欢迎信息 =====
+# ===== 9. 创建欢迎信息 =====
 echo "创建欢迎信息..."
-cat > openwrt/files/etc/banner << 'EOF'
+cat > files/etc/banner << 'EOF'
   _______                     ________        __
  |       |.-----.-----.-----.|  |  |  |.----.|  |_
  |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
@@ -193,4 +181,4 @@ echo "========================================="
 echo "new.sh 预配置脚本执行完成！"
 echo "========================================="
 echo "创建的文件列表："
-find openwrt/files -type f | sort
+find files -type f | sort
