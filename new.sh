@@ -1,6 +1,6 @@
 #!/bin/bash
 # new.sh - XG-040G-MD 小楼版预配置脚本
-# 只保留 small_package 源 + Go 修复
+# 不带 PassWall，只保留基础功能
 
 set -e
 
@@ -15,7 +15,7 @@ if [ -f "feeds.conf.default" ]; then
     echo "✅ 已备份原 feeds.conf.default"
 fi
 
-# ===== 2. 创建全新的 feeds.conf.default（只保留 small_package）=====
+# ===== 2. 创建全新的 feeds.conf.default（只保留官方源）=====
 echo "创建新的 feeds.conf.default..."
 cat > feeds.conf.default << 'EOF'
 # ImmortalWrt 官方源
@@ -23,14 +23,6 @@ src-git packages https://git.immortalwrt.org/immortalwrt/packages.git
 src-git luci https://git.immortalwrt.org/immortalwrt/luci.git
 src-git routing https://git.immortalwrt.org/routing/packages.git
 src-git telephony https://git.immortalwrt.org/telephony/telephony.git
-
-# 只保留 small_package 源（包含 PassWall 和常用包）
-src-git small_package https://github.com/kenzok8/small-package.git;master
-
-# 注释掉可能有问题的源
-# src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
-# src-git passwall_luci https://github.com/xiaorouji/openwrt-passwall.git;main
-# src-git kenzo https://github.com/kenzok8/openwrt-packages.git;master
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
@@ -171,7 +163,7 @@ cat > files/etc/banner << 'EOF'
  -----------------------------------------------------
  版本: ImmortalWrt 25.12
  设备: XG-040G-MD (Airoha EN7581)
- 功能: PassWall + HomeProxy + mwan3 + ksmbd
+ 功能: mwan3 + smartdns + zerotier + homeproxy + ksmbd + vsftpd-alt + transmission + upnp
  默认IP: 192.168.100.254
  -----------------------------------------------------
 EOF
