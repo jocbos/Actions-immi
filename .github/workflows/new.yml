@@ -243,9 +243,3 @@ jobs:
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: 清理旧Artifacts
-      uses: c-hive/gha-remove-artifacts@v1
-      with:
-        age: '30 days'  # 删除30天前的Artifact
-        skip-recent: 5  # 保留最近5个
