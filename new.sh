@@ -15,14 +15,17 @@ if [ -f "feeds.conf.default" ]; then
     echo "✅ 已备份原 feeds.conf.default"
 fi
 
-# ===== 2. 创建全新的 feeds.conf.default（只保留官方源）=====
+# ===== 2. 创建全新的 feeds.conf.default =====
 echo "创建新的 feeds.conf.default..."
 cat > feeds.conf.default << 'EOF'
-# ImmortalWrt 官方源（使用国内镜像）
+# ImmortalWrt 官方源
 src-git packages https://github.com/immortalwrt/packages.git
 src-git luci https://github.com/immortalwrt/luci.git
 src-git routing https://github.com/immortalwrt/routing.git
 # src-git telephony https://github.com/immortalwrt/telephony.git
+
+# 第三方源（包含 alist 等常用包）
+src-git small_package https://github.com/kenzok8/small-package.git;master
 EOF
 
 echo "✅ feeds.conf.default 创建完成"
