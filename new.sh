@@ -200,6 +200,9 @@ if [ ! -d "package/alist" ]; then
     # 下载 luci-app-alist
     mkdir -p package/luci-app-alist
     wget -O package/luci-app-alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/luci-app-alist/Makefile
+    mkdir -p package/alist/files
+    wget -O package/alist/files/alist.config https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.config
+    wget -O package/alist/files/alist.init https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.init
     echo "✅ alist 包手动添加完成"
 fi
 echo "========================================="
