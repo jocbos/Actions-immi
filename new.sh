@@ -23,11 +23,7 @@ src-git packages https://github.com/immortalwrt/packages.git
 src-git luci https://github.com/immortalwrt/luci.git
 src-git routing https://github.com/immortalwrt/routing.git
 # src-git telephony https://github.com/immortalwrt/telephony.git
-
-# 第三方源（包含 alist 等常用包）
-src-git small_package https://github.com/kenzok8/small-package.git;master
 EOF
-
 echo "✅ feeds.conf.default 创建完成"
 echo "----------------------------------------"
 cat feeds.conf.default
@@ -194,4 +190,16 @@ echo "创建的文件列表："
 find files -type f | sort | sed 's/^/  /'
 echo ""
 echo "总共创建了 $(find files -type f | wc -l) 个文件"
+# ===== 手动添加 alist 包（最保险）=====
+echo "手动添加 alist 包..."
+if [ ! -d "package/alist" ]; then
+    # 下载 alist 源码包
+    mkdir -p package/alist
+    wget -O package/alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/Makefile
+    
+    # 下载 luci-app-alist
+    mkdir -p package/luci-app-alist
+    wget -O package/luci-app-alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/luci-app-alist/Makefile
+    echo "✅ alist 包手动添加完成"
+fi
 echo "========================================="
