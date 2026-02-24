@@ -20,11 +20,11 @@ echo "安装 feeds..."
 ./scripts/feeds install -a
 echo "✅ feeds 安装完成"
 
-# ===== 2. 修复 vsftpd-alt 权限 =====
-echo "修复 vsftpd-alt 权限..."
-if [ -d "feeds/luci/applications/luci-app-vsftpd-alt" ]; then
-    chmod -R 755 feeds/luci/applications/luci-app-vsftpd-alt/root/etc/uci-defaults/
-    echo "✅ vsftpd-alt 权限修复完成"
+# ===== 2. 修复alist 权限 =====
+echo "修复 Alist 权限..."
+if [ -d "feeds/luci/applications/luci-app-alist" ]; then
+    chmod -R 755 feeds/luci/applications/luci-app-alist/root/etc/uci-defaults/
+    echo "✅ Alist 权限修复完成"
 fi
 
 # ===== 3. 修复 homeproxy 权限 =====
