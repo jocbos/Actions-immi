@@ -190,34 +190,60 @@ echo "创建的文件列表："
 find files -type f | sort | sed 's/^/  /'
 echo ""
 echo "总共创建了 $(find files -type f | wc -l) 个文件"
-# ===== 手动添加 alist 包（完整版）=====
-echo "手动添加 alist 包..."
-if [ ! -d "package/alist" ]; then
-    # 下载 alist 核心包
-    mkdir -p package/alist
-    wget -O package/alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/Makefile
+# ===== 添加 webd（轻量级 WebDAV）=====
+echo "添加 webd..."
+if [ ! -d "package/webd" ]; then
+    # 创建 webd 目录
+    mkdir -p package/webd/files
     
-    # 下载 luci-app-alist
-    mkdir -p package/luci-app-alist
-    wget -O package/luci-app-alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/luci-app-alist/Makefile
+    # 下载 Makefile
+    wget -O package/webd/Makefile https://raw.githubusercontent.com/openwrt/packages/master/net/webd/Makefile
     
-    # 下载所有必需的文件
-    mkdir -p package/alist/files
-    wget -O package/alist/files/alist.config https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.config
-    wget -O package/alist/files/alist.init https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.init
-    wget -O package/alist/files/data.db https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/data.db
+    # 创建默认配置文件（可选）
+    mkdir -p package/webd/files/etc/config
+    cat > package/webd/files/etc/config/webd << 'EOF'
+config webd 'main'
+    option enabled '1'
+    option port '5244'
+    option root '/mnt'
+    option auth 'admin:$1$yZ9jU7qL$k3F2mN8rX5vB9cW7'  # 默认密码: password
+EOF
     
-    # 验证所有文件都下载成功
-    echo "验证文件下载..."
-    for file in alist.config alist.init data.db; do
-        if [ -f "package/alist/files/$file" ]; then
-            echo "  ✅ $file 下载成功"
-        else
-            echo "  ❌ $file 下载失败"
-            exit 1
-        fi
-    done
+    # 创建 init.d 启动脚本
+    mkdir -p package/webd/files/etc/init.d
+    cat > package/webd/files/etc/init.d/webd << 'EOF'
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=10
+
+USE_PROCD=1
+
+start_service() {
+    local enabled port root auth
     
-    echo "✅ alist 包手动添加完成（共5个文件）"
+    config_load webd
+    config_get enabled main enabled
+    config_get port main port 5244
+    config_get root main root '/mnt'
+    config_get auth main auth ''
+    
+    [ "$enabled" = "0" ] && return
+    
+    procd_open_instance
+    procd_set_param command /usr/bin/webd
+    [ -n "$port" ] && procd_append_param command -p "$port"
+    [ -n "$root" ] && procd_append_param command -r "$root"
+    [ -n "$auth" ] && procd_append_param command -a "$auth"
+    procd_set_param respawn
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_close_instance
+}
+EOF
+    chmod +x package/webd/files/etc/init.d/webd
+    
+    echo "✅ webd 添加完成"
 fi
-echo "========================================="
+
+
