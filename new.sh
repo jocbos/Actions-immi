@@ -191,59 +191,56 @@ find files -type f | sort | sed 's/^/  /'
 echo ""
 echo "总共创建了 $(find files -type f | wc -l) 个文件"
 # ===== 添加 webd（轻量级 WebDAV）=====
+# ===== 添加 webd（轻量级 WebDAV）=====
 echo "添加 webd..."
-if [ ! -d "package/webd" ]; then
-    # 创建 webd 目录
-    mkdir -p package/webd/files
-    
-    # 下载 Makefile
-    wget -O package/webd/Makefile https://raw.githubusercontent.com/openwrt/packages/master/net/webd/Makefile
-    
-    # 创建默认配置文件（可选）
-    mkdir -p package/webd/files/etc/config
-    cat > package/webd/files/etc/config/webd << 'EOF'
-config webd 'main'
-    option enabled '1'
-    option port '5244'
-    option root '/mnt'
-    option auth 'admin:$1$yZ9jU7qL$k3F2mN8rX5vB9cW7'  # 默认密码: password
-EOF
-    
-    # 创建 init.d 启动脚本
-    mkdir -p package/webd/files/etc/init.d
-    cat > package/webd/files/etc/init.d/webd << 'EOF'
+
+# 创建必要目录
+mkdir -p files/usr/bin
+mkdir -p files/etc/init.d
+mkdir -p files/etc/config
+
+# 下载 webd 二进制文件
+if [ ! -f "files/usr/bin/webd" ]; then
+    wget -O files/usr/bin/webd https://github.com/webd90kb/webd/releases/latest/download/webd-linux-aarch64
+    chmod +x files/usr/bin/webd
+    echo "✅ webd 二进制下载成功"
+else
+    echo "✅ webd 已存在"
+fi
+
+# 创建启动脚本
+cat > files/etc/init.d/webd << 'EOF'
 #!/bin/sh /etc/rc.common
 
 START=99
 STOP=10
 
-USE_PROCD=1
+start() {
+    # 后台运行 webd
+    /usr/bin/webd -p 5244 -r /mnt -a admin:password >/dev/null 2>&1 &
+    echo "Webd started on port 5244"
+}
 
-start_service() {
-    local enabled port root auth
-    
-    config_load webd
-    config_get enabled main enabled
-    config_get port main port 5244
-    config_get root main root '/mnt'
-    config_get auth main auth ''
-    
-    [ "$enabled" = "0" ] && return
-    
-    procd_open_instance
-    procd_set_param command /usr/bin/webd
-    [ -n "$port" ] && procd_append_param command -p "$port"
-    [ -n "$root" ] && procd_append_param command -r "$root"
-    [ -n "$auth" ] && procd_append_param command -a "$auth"
-    procd_set_param respawn
-    procd_set_param stdout 1
-    procd_set_param stderr 1
-    procd_close_instance
+stop() {
+    killall webd
+}
+
+restart() {
+    stop
+    sleep 1
+    start
 }
 EOF
-    chmod +x package/webd/files/etc/init.d/webd
-    
-    echo "✅ webd 添加完成"
-fi
+chmod +x files/etc/init.d/webd
 
+# 创建配置文件（可选）
+cat > files/etc/config/webd << 'EOF'
+# Webd 配置
+# 端口: 5244
+# 根目录: /mnt
+# 用户名: admin
+# 密码: password
+EOF
+
+echo "✅ webd 添加完成"
 
