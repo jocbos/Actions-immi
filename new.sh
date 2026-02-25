@@ -182,84 +182,33 @@ EOF
 chmod +x files/etc/firewall.user
 echo "✅ 防火墙优化规则完成"
 # ===== 添加 webd（源码编译版）=====
+# ===== 添加 webd（二进制版）=====
 echo "添加 webd..."
 
-# 创建 webd 目录
-mkdir -p package/webd/files
+# 创建必要目录
+mkdir -p files/usr/bin
+mkdir -p files/etc/init.d
 
-# 下载 Makefile
-cat > package/webd/Makefile << 'EOF'
-include $(TOPDIR)/rules.mk
+# 下载 webd 二进制文件（使用官方 release）
+wget -O files/usr/bin/webd https://github.com/hacdias/webd/releases/download/v6.0.1/webd-linux-arm64
+chmod +x files/usr/bin/webd
 
-PKG_NAME:=webd
-PKG_VERSION:=6.0.1
-PKG_RELEASE:=1
-
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/webd90kb/webd/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=skip
-
-PKG_LICENSE:=MIT
-PKG_BUILD_DEPENDS:=golang/host
-PKG_BUILD_PARALLEL:=1
-PKG_USE_MIPS16:=0
-
-GO_PKG:=github.com/hacdias/webd
-GO_PKG_LDFLAGS:=-s -w
-GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
-
-include $(INCLUDE_DIR)/package.mk
-include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
-
-define Package/webd
-  SECTION:=net
-  CATEGORY:=Network
-  SUBMENU:=Web Servers/Proxies
-  TITLE:=A lightweight WebDAV server and file manager
-  URL:=https://github.com/hacdias/webd
-  DEPENDS:=$(GO_ARCH_DEPENDS)
-endef
-
-define Package/webd/description
-  A lightweight WebDAV server and file manager with a web interface.
-endef
-
-define Package/webd/install
-	$(call GoPackage/Package/Install/Bin,$(1))
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/webd.init $(1)/etc/init.d/webd
-endef
-
-$(eval $(call GoPackage,webd))
-$(eval $(call BuildPackage,webd))
-EOF
-
-# 创建 init 脚本
-cat > package/webd/files/webd.init << 'EOF'
+# 创建启动脚本
+cat > files/etc/init.d/webd << 'EOF'
 #!/bin/sh /etc/rc.common
 
 START=99
 STOP=10
 
-USE_PROCD=1
-
-start_service() {
-    procd_open_instance
-    procd_set_param command /usr/bin/webd
-    procd_append_param command -p 5244
-    procd_append_param command -r /mnt
-    procd_append_param command -a admin:password
-    procd_set_param respawn
-    procd_set_param stdout 1
-    procd_set_param stderr 1
-    procd_close_instance
+start() {
+    /usr/bin/webd -p 5244 -r /mnt -a admin:password >/dev/null 2>&1 &
 }
 
-stop_service() {
+stop() {
     killall webd
 }
 EOF
-chmod +x package/webd/files/webd.init
+chmod +x files/etc/init.d/webd
 
 echo "✅ webd 添加完成"
 echo ""
