@@ -181,36 +181,6 @@ exit 0
 EOF
 chmod +x files/etc/firewall.user
 echo "✅ 防火墙优化规则完成"
-# ===== 添加 webd（源码编译版）=====
-# ===== 添加 webd（二进制版）=====
-echo "添加 webd..."
-
-# 创建必要目录
-mkdir -p files/usr/bin
-mkdir -p files/etc/init.d
-
-# 下载 webd 二进制文件（使用官方 release）
-wget -O files/usr/bin/webd https://github.com/hacdias/webd/releases/download/v6.0.1/webd-linux-arm64
-chmod +x files/usr/bin/webd
-
-# 创建启动脚本
-cat > files/etc/init.d/webd << 'EOF'
-#!/bin/sh /etc/rc.common
-
-START=99
-STOP=10
-
-start() {
-    /usr/bin/webd -p 5244 -r /mnt -a admin:password >/dev/null 2>&1 &
-}
-
-stop() {
-    killall webd
-}
-EOF
-chmod +x files/etc/init.d/webd
-
-echo "✅ webd 添加完成"
 echo ""
 echo "========================================="
 echo "new.sh 预配置脚本执行完成！"
