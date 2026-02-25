@@ -190,19 +190,34 @@ echo "创建的文件列表："
 find files -type f | sort | sed 's/^/  /'
 echo ""
 echo "总共创建了 $(find files -type f | wc -l) 个文件"
-# ===== 手动添加 alist 包（最保险）=====
+# ===== 手动添加 alist 包（完整版）=====
 echo "手动添加 alist 包..."
 if [ ! -d "package/alist" ]; then
-    # 下载 alist 源码包
+    # 下载 alist 核心包
     mkdir -p package/alist
     wget -O package/alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/Makefile
     
     # 下载 luci-app-alist
     mkdir -p package/luci-app-alist
     wget -O package/luci-app-alist/Makefile https://raw.githubusercontent.com/sbwml/openwrt-alist/master/luci-app-alist/Makefile
+    
+    # 下载所有必需的文件
     mkdir -p package/alist/files
     wget -O package/alist/files/alist.config https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.config
     wget -O package/alist/files/alist.init https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/alist.init
-    echo "✅ alist 包手动添加完成"
+    wget -O package/alist/files/data.db https://raw.githubusercontent.com/sbwml/openwrt-alist/master/alist/files/data.db
+    
+    # 验证所有文件都下载成功
+    echo "验证文件下载..."
+    for file in alist.config alist.init data.db; do
+        if [ -f "package/alist/files/$file" ]; then
+            echo "  ✅ $file 下载成功"
+        else
+            echo "  ❌ $file 下载失败"
+            exit 1
+        fi
+    done
+    
+    echo "✅ alist 包手动添加完成（共5个文件）"
 fi
 echo "========================================="
