@@ -232,7 +232,7 @@ jobs:
       with:
         name: build-config-${{ env.RELEASE_TAG }}
         path: |
-          config/newV.config
+          config/alistV.config
           openwrt/.config
           openwrt/feeds.conf.default
 
