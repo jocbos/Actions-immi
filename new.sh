@@ -1,6 +1,6 @@
 #!/bin/bash
-# new.sh - XG-040G-MD 小楼版预配置脚本
-# 不带 PassWall，只保留基础功能
+# new.sh - XG-040G-MD 
+
 
 set -e
 
@@ -162,7 +162,7 @@ cat > files/etc/banner << 'EOF'
  -----------------------------------------------------
  版本: ImmortalWrt 25.12
  设备: XG-040G-MD (Airoha EN7581)
- 功能: mwan3 + smartdns + zerotier + homeproxy + ksmbd + vsftpd-alt + transmission + upnp
+ 功能: mwan3 + smartdns + zerotier + homeproxy + ksmbd  + transmission + upnp
  默认IP: 192.168.100.254
  -----------------------------------------------------
 EOF
