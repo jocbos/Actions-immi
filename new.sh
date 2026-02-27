@@ -168,19 +168,7 @@ cat > files/etc/banner << 'EOF'
 EOF
 echo "✅ 欢迎信息完成"
 
-# ===== 10. 创建防火墙优化规则 =====
-echo ""
-echo "创建防火墙优化规则..."
-cat > files/etc/firewall.user << 'EOF'
-# 自定义防火墙规则
-echo bbr > /proc/sys/net/ipv4/tcp_congestion_control
-echo 65536 > /proc/sys/net/netfilter/nf_conntrack_max
-echo 30 > /proc/sys/net/netfilter/nf_conntrack_udp_timeout
-echo 30 > /proc/sys/net/netfilter/nf_conntrack_icmp_timeout
-exit 0
-EOF
-chmod +x files/etc/firewall.user
-echo "✅ 防火墙优化规则完成"
+
 echo ""
 echo "========================================="
 echo "new.sh 预配置脚本执行完成！"
