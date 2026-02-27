@@ -51,15 +51,7 @@ else
     echo "⚠️ feeds/luci 目录不存在，跳过索引生成"
 fi
 
-# ===== 6. 确保 iptables 模块完整 =====
-echo "检查并创建缺失的依赖..."
-mkdir -p files/etc/modules.d
-cat > files/etc/modules.d/20-iptables-extra << 'EOF'
-# 额外 iptables 模块
-nf_conntrack
-nf_conntrack_ipv4
-nf_nat
-EOF
+
 echo "✅ 依赖检查完成"
 
 echo "========================================="
