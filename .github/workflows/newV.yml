@@ -1,4 +1,4 @@
-name: Build XG-040G-MD webdav 版
+name: Build XG-040G-MD 新版firewall
 
 on:
   workflow_dispatch:
