@@ -1,0 +1,268 @@
+name: Build ImmortalWrt for J1800
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: '🔧 SSH调试模式'
+        required: false
+        default: false
+        type: boolean
+      log_switch:
+        description: '📝 详细编译日志'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CONFIG_FILE: 'config/j1800.config'
+  DIY_SCRIPT: new.sh
+  REPO_URL: https://github.com/bingoguo93/immortalwrt
+  REPO_BRANCH: openwrt-25.12
+  TZ: Asia/Shanghai
+  UPLOAD_RELEASE: true
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 清理磁盘空间
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: true
+        android: true
+        dotnet: true
+        large-packages: true
+
+    - name: 安装依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential clang flex bison g++ gawk \
+        gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+        python3 python3-setuptools rsync unzip zlib1g-dev file wget pigz ccache
+
+    - name: 克隆源码
+      run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+
+    - name: 创建缓存目录
+      run: |
+        sudo mkdir -p /mnt/openwrt/{dl,ccache}
+        sudo chown -R $USER:$GROUPS /mnt/openwrt
+        ln -sfn /mnt/openwrt/dl openwrt/dl
+        
+    - name: 配置ccache
+      run: |
+        mkdir -p ~/.ccache
+        ccache -M 5G
+        echo 'export PATH="/usr/lib/ccache:$PATH"' >> ~/.bashrc
+
+    - name: 恢复dl缓存
+      uses: actions/cache@v4
+      with:
+        path: /mnt/openwrt/dl
+        key: ${{ runner.os }}-immortalwrt-dl-${{ hashFiles('feeds.conf.default') }}
+        restore-keys: |
+          ${{ runner.os }}-immortalwrt-dl-
+
+    - name: 运行DIY脚本
+      run: |
+        chmod +x $DIY_SCRIPT
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_SCRIPT
+
+    - name: Update & Install feeds
+      working-directory: ./openwrt
+      run: |
+        echo "当前 feeds.conf.default 内容："
+        cat feeds.conf.default
+    
+        echo "测试网络连接..."
+        ping -c 3 github.com || true
+        ping -c 3 git.immortalwrt.org || true
+    
+        echo "开始更新 feeds（带详细输出）..."
+        ./scripts/feeds update -a -v
+    
+        # 检查是否下载成功
+        echo "检查下载的 feeds："
+        ls -la feeds/ || true
+    
+        if [ ! -d "feeds/packages" ]; then
+          echo "第一次更新失败，等待10秒后重试..."
+          sleep 10
+          ./scripts/feeds update -a -v
+        fi
+    
+        # 安装 feeds
+        ./scripts/feeds install -a
+
+    - name: 运行post-feeds脚本
+      working-directory: ./openwrt
+      run: |
+        chmod +x $GITHUB_WORKSPACE/post-feeds.sh
+        $GITHUB_WORKSPACE/post-feeds.sh
+
+    - name: 应用配置
+      run: |
+        cp -f "${CONFIG_FILE}" openwrt/.config
+        cd openwrt && make defconfig
+
+    - name: 下载源码包
+      working-directory: ./openwrt
+      run: make download -j8 || make download -j1 V=s
+
+    - name: 编译固件
+      working-directory: ./openwrt
+      run: |
+        START_TIME=$(date +%s)
+        if [[ "${{ github.event.inputs.log_switch }}" == "true" ]]; then
+            echo "🔍 使用详细日志模式编译"
+            make -j1 V=s
+        else
+            echo "🚀 使用并行模式编译"
+            make -j$(nproc)
+        fi
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: 设置版本信息
+      run: |
+        echo "DEVICE_NAME=J1800" >> $GITHUB_ENV
+        echo "RELEASE_TAG=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+
+    - name: 整理固件
+      id: organize
+      run: |
+        cd openwrt/bin/targets/x86/64
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "✅ 固件生成在: $PWD"
+        ls -la
+        
+        # 获取固件文件名 (优先取 combined 格式)
+        FW_FILE=$(ls *-combined*.img.gz 2>/dev/null | head -1)
+        if [ -z "$FW_FILE" ]; then
+          FW_FILE=$(ls *.img.gz | head -1)
+        fi
+        echo "FW_FILE=$FW_FILE" >> $GITHUB_ENV
+        echo "FW_PATH=$PWD/$FW_FILE" >> $GITHUB_ENV
+
+    - name: 生成Release信息
+      id: release_info
+      run: |
+        # 获取编译时间
+        BUILD_TIME=$(date +"%Y-%m-%d %H:%M:%S")
+        
+        # 创建Release说明
+        cat > release.md <<EOF
+        ## 🚀 J1800 标准版固件 (x86_64)
+        
+        **编译时间**: $BUILD_TIME
+        **设备型号**: J1800 / 升腾 C92 及其他 x86_64 软路由
+        **源码仓库**: $REPO_URL
+        **分支**: $REPO_BRANCH
+        
+        ### ✨ 功能特性
+        - 防火墙: firewall4 + nftables (新版)
+        - 网络核心: mwan3 + SmartDNS + ZeroTier + HomeProxy + UPnP
+        - 文件共享: ksmbd (SMB)
+        - 下载服务: Transmission (web-control 美化版)
+        - USB支持: RTL8156B 2.5G 网卡驱动 + 各类 USB 网卡
+        - 磁盘管理: diskman + 文件系统工具 (ext4/ntfs/exfat/btrfs)
+        - 美化主题: argon + advancedplus
+        
+        ### 📦 主要软件包
+        \`\`\`
+        firewall4, mwan3, smartdns, zerotier, homeproxy, upnp,
+        ksmbd, transmission, luci-app-diskman, kmod-usb-net-rtl8152,
+        r8152-firmware, kmod-usb-net-cdc-ncm, iperf3, htop, etc.
+        \`\`\`
+        
+        ### 📥 下载
+        - 固件文件: \`${{ env.FW_FILE }}\`
+        - 文件大小: $(du -h ${{ env.FW_PATH }} | cut -f1)
+        
+        ### 🔧 安装说明 (x86_64平台)
+        
+        **方法1: 写盘安装 (推荐)**
+        \`\`\`bash
+        # 解压固件
+        gunzip ${{ env.FW_FILE }}
+        
+        # 写入硬盘/电子盘 (假设目标盘为 /dev/sda)
+        dd if=*.img of=/dev/sda bs=1M status=progress
+        
+        # 重启并从硬盘启动
+        \`\`\`
+        
+        **方法2: 制作启动U盘**
+        \`\`\`bash
+        # 使用 Rufus (Windows) 或 dd 命令写入U盘
+        # 从U盘启动后，可再写入硬盘
+        \`\`\`
+        
+        **方法3: 虚拟机使用**
+        - 使用生成的 \`*.vmdk\` 或 \`*.qcow2\` 文件
+        
+        ### ⚠️ 注意事项
+        - 默认IP: 192.168.1.1
+        - 默认用户名: root, 无密码
+        - 首次启动较慢，请耐心等待
+        - RTL8156B USB网卡已内置驱动，即插即用
+        - 如需使用其他USB网卡，大部分也已包含驱动
+        EOF
+        
+        echo "✅ Release信息生成完毕"
+
+    - name: 上传固件到Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: J1800-x86-64_${{ env.FILE_DATE }}
+        path: |
+          ${{ env.FIRMWARE }}/*.img.gz
+          ${{ env.FIRMWARE }}/*.iso
+          ${{ env.FIRMWARE }}/*.vmdk
+          ${{ env.FIRMWARE }}/*.qcow2
+        retention-days: 90
+
+    - name: 创建GitHub Release
+      id: create_release
+      if: env.UPLOAD_RELEASE == 'true'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: J1800-x86-64_${{ env.RELEASE_TAG }}
+        name: J1800 x86_64 固件 ${{ env.RELEASE_TAG }}
+        body_path: release.md
+        files: |
+          ${{ env.FIRMWARE }}/*.img.gz
+          ${{ env.FIRMWARE }}/*.iso
+          ${{ env.FIRMWARE }}/*.vmdk
+          ${{ env.FIRMWARE }}/*.qcow2
+          openwrt/.config
+        draft: false
+        prerelease: false
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 上传.config配置文件
+      if: env.UPLOAD_RELEASE == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-config-${{ env.RELEASE_TAG }}
+        path: |
+          config/j1800.config
+          openwrt/.config
+          openwrt/feeds.conf.default
+
+    - name: 清理旧Releases
+      uses: dev-drprasad/delete-older-releases@v0.2.1
+      with:
+        keep_latest: 5
