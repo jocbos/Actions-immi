@@ -25,7 +25,12 @@ USB_PACKAGES=(
 
 for pkg in "${USB_PACKAGES[@]}"; do
     echo "   - 安装 $pkg"
-    ./scripts/feeds install "$pkg" 2>/dev/null || true
+    ./scripts/feeds install "$pkg" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "     ✅ 成功"
+    else
+        echo "     ⚠️ 失败（可能已存在或不需要）"
+    fi
 done
 
 # ===========================================
@@ -53,23 +58,63 @@ PACKAGES=(
     "luci-i18n-ksmbd-zh-cn"
 )
 
-# Transmission 包名可能不同，尝试几种可能
-echo "   - 安装 Transmission..."
-./scripts/feeds install transmission-daemon 2>/dev/null || \
-./scripts/feeds install transmission-daemon-openssl 2>/dev/null || \
-echo "     ⚠️ Transmission 未找到，可后续手动安装"
-
-./scripts/feeds install luci-app-transmission 2>/dev/null || true
-./scripts/feeds install luci-i18n-transmission-zh-cn 2>/dev/null || true
-
-# 安装其他包
 for pkg in "${PACKAGES[@]}"; do
     echo "   - 安装 $pkg"
-    ./scripts/feeds install "$pkg" 2>/dev/null || echo "     ⚠️ 安装失败"
+    ./scripts/feeds install "$pkg" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "     ✅ 成功"
+    else
+        echo "     ⚠️ 失败（可能已存在或不需要）"
+    fi
 done
 
 # ===========================================
-# 3. 创建安装记录
+# 3. 安装 Transmission（特殊处理）
+# ===========================================
+echo "📥 安装 Transmission..."
+
+TRANSMISSION_PACKAGES=(
+    "transmission-daemon"
+    "transmission-web"
+    "transmission-web-control"
+    "luci-app-transmission"
+    "luci-i18n-transmission-zh-cn"
+)
+
+for pkg in "${TRANSMISSION_PACKAGES[@]}"; do
+    echo "   - 检查 $pkg..."
+    
+    # 先查找包是否存在
+    PKG_PATH=$(find package/feeds -name "$pkg" -type d 2>/dev/null | head -1)
+    
+    if [ -n "$PKG_PATH" ]; then
+        echo "     📍 找到包: $PKG_PATH"
+        ./scripts/feeds install "$pkg" > /dev/null 2>&1
+        echo "     ✅ 安装命令已执行"
+    else
+        # 尝试在 feeds 中搜索
+        FOUND=$(find feeds -name "*$pkg*" -type d 2>/dev/null | head -1)
+        if [ -n "$FOUND" ]; then
+            echo "     📍 在 $FOUND 找到相似包"
+            PKG_NAME=$(basename "$FOUND")
+            ./scripts/feeds install "$PKG_NAME" > /dev/null 2>&1
+            echo "     ✅ 尝试安装 $PKG_NAME"
+        else
+            echo "     ⚠️ 未找到 $pkg，可能包名不同或需要添加源"
+        fi
+    fi
+done
+
+# ===========================================
+# 4. 列出所有可用的 transmission 相关包
+# ===========================================
+echo "🔍 搜索所有 transmission 相关包..."
+find feeds -name "*transmission*" -type d 2>/dev/null | while read -r line; do
+    echo "   - $line"
+done
+
+# ===========================================
+# 5. 创建安装记录
 # ===========================================
 cat > "$WORKSPACE/feeds-installed.txt" <<EOF
 # J1800 编译 feeds 安装记录
@@ -80,13 +125,15 @@ $(for pkg in "${USB_PACKAGES[@]}"; do echo "- $pkg"; done)
 
 已安装的功能包:
 $(for pkg in "${PACKAGES[@]}"; do echo "- $pkg"; done)
-- transmission (尝试安装)
+
+Transmission 相关包:
+$(find feeds -name "*transmission*" -type d 2>/dev/null | sed 's/^/ - /')
 EOF
 
-echo "📝 安装记录已保存"
+echo "📝 安装记录已保存到: $WORKSPACE/feeds-installed.txt"
 
 # ===========================================
-# 4. 完成
+# 6. 完成
 # ===========================================
 cd "$WORKSPACE" || true
 
