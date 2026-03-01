@@ -6,33 +6,70 @@ echo "========================================="
 echo "🚀 开始 J1800/升腾 C92 编译前配置"
 echo "========================================="
 
-cd openwrt || exit 1
+# 获取当前工作目录
+WORKSPACE=$GITHUB_WORKSPACE
+echo "📂 当前工作目录: $WORKSPACE"
+echo "📂 当前目录内容:"
+ls -la
+
+# 检查 openwrt 目录是否存在
+if [ -d "openwrt" ]; then
+    echo "✅ 找到 openwrt 目录"
+    cd openwrt || exit 1
+elif [ -d "$WORKSPACE/openwrt" ]; then
+    echo "✅ 在 WORKSPACE 中找到 openwrt 目录"
+    cd "$WORKSPACE/openwrt" || exit 1
+else
+    echo "❌ 错误: 找不到 openwrt 目录!"
+    echo "当前目录: $(pwd)"
+    echo "目录内容:"
+    ls -la
+    exit 1
+fi
+
+echo "✅ 已进入 openwrt 目录: $(pwd)"
 
 # ===========================================
 # 1. 添加第三方软件包源
 # ===========================================
 echo "📦 添加第三方软件包源 (kenzo/small)..."
 
-cat >> feeds.conf.default <<EOF
+# 备份原文件
+cp feeds.conf.default feeds.conf.default.bak 2>/dev/null || true
+
+# 检查是否已添加，避免重复
+if ! grep -q "kenzok8/openwrt-packages" feeds.conf.default; then
+    cat >> feeds.conf.default <<EOF
 
 # 第三方软件包源 (包含 homeproxy 等)
 src-git kenzo https://github.com/kenzok8/openwrt-packages
 src-git small https://github.com/kenzok8/small
 EOF
+    echo "✅ 已添加 kenzo/small 源"
+else
+    echo "⚠️ kenzo/small 源已存在，跳过添加"
+fi
 
 # ===========================================
 # 2. 添加自定义 banner
 # ===========================================
 echo "🎨 添加自定义 banner..."
 
-cat >> package/base-files/files/etc/banner <<EOF
+# 确保目录存在
+mkdir -p package/base-files/files/etc
+
+cat > package/base-files/files/etc/banner <<EOF
 -----------------------------------------------------
  升腾 C92 / J1800 单网口软路由
  编译时间: $(date +"%Y-%m-%d %H:%M:%S")
  默认 IP: 192.168.100.100
  支持 RTL8156B USB 2.5G 网卡
 -----------------------------------------------------
+
+
 EOF
+
+echo "✅ banner 已更新"
 
 # ===========================================
 # 3. 创建自定义文件目录
@@ -41,6 +78,9 @@ echo "📁 创建自定义文件目录..."
 mkdir -p files/etc/config
 mkdir -p files/etc/uci-defaults
 mkdir -p files/root
+mkdir -p files/etc/sysctl.d
+
+echo "✅ 自定义目录创建完成"
 
 # ===========================================
 # 4. 配置默认网络 (单网口 + USB网卡就绪)
@@ -76,23 +116,13 @@ config interface 'lan'
 # 插入后会自动识别，可在 LuCI 中添加接口
 # 推荐用途: USB网卡作为 WAN 口
 # ============================================
-# 示例 - 如果想让 USB 网卡自动配置为 DHCP 客户端，取消下面注释
-# 
-# config interface 'wan'
-#     option device 'eth1'  # 部分系统可能命名为 usb0 或 enx*
-#     option proto 'dhcp'
-# 
-# 示例 - 如果想让 USB 网卡自动配置为 PPPoE 拨号
-# 
-# config interface 'wan'
-#     option device 'eth1'
-#     option proto 'pppoe'
-#     option username '你的宽带账号'
-#     option password '你的宽带密码'
+# 示例配置已注释，用户可根据需要自行启用
 EOF
 
+echo "✅ 网络配置完成"
+
 # ===========================================
-# 5. 配置防火墙 (为单网口+USB网卡准备)
+# 5. 配置防火墙
 # ===========================================
 echo "🔥 配置防火墙规则..."
 
@@ -113,7 +143,6 @@ config zone
     option forward 'ACCEPT'
     list network 'lan'
 
-# 预留 WAN 区域 (供 USB 网卡使用)
 config zone
     option name 'wan'
     option input 'REJECT'
@@ -123,12 +152,10 @@ config zone
     option mtu_fix '1'
     list network 'wan'
 
-# 允许 LAN 到 WAN 的转发
 config forwarding
     option src 'lan'
     option dest 'wan'
 
-# 针对单网口 + USB 网卡的额外规则
 config rule
     option name 'Allow-DHCP'
     option src 'lan'
@@ -146,43 +173,53 @@ config rule
     option target 'ACCEPT'
 EOF
 
+echo "✅ 防火墙配置完成"
+
 # ===========================================
 # 6. 添加 RTL8156B 自动配置脚本
 # ===========================================
 echo "⚡ 添加 RTL8156B USB 网卡自动配置脚本..."
 
-cat > files/etc/uci-defaults/99-rtl8156b-setup <<EOF
+cat > files/etc/uci-defaults/99-rtl8156b-setup <<'EOF'
 #!/bin/sh
 # 自动检测 RTL8156B USB 网卡并提示配置
 
 # 等待系统完全启动
 sleep 10
 
+# 记录日志
+logger -t RTL8156B "检查 USB 网卡..."
+
 # 检查是否有 RTL8156B 网卡
-if lsusb | grep -q "0bda:8156"; then
+if lsusb 2>/dev/null | grep -q "0bda:8156"; then
+    logger -t RTL8156B "检测到 RTL8156B USB 2.5G 网卡"
     echo "✅ 检测到 RTL8156B USB 2.5G 网卡" > /dev/console
     
     # 查找新出现的网络接口
     for iface in /sys/class/net/*; do
-        iface_name=\$(basename \$iface)
+        iface_name=$(basename $iface)
         # 排除回环和板载网口
-        if [ "\$iface_name" != "lo" ] && [ "\$iface_name" != "eth0" ] && [ "\$iface_name" != "br-lan" ]; then
-            echo "📡 检测到新网卡: \$iface_name" > /dev/console
+        if [ "$iface_name" != "lo" ] && [ "$iface_name" != "eth0" ] && [ "$iface_name" != "br-lan" ]; then
+            logger -t RTL8156B "检测到新网卡: $iface_name"
+            echo "📡 检测到新网卡: $iface_name" > /dev/console
             echo "💡 请在 LuCI 网络 → 接口 中配置此网卡作为 WAN 口" > /dev/console
             break
         fi
     done
+else
+    logger -t RTL8156B "未检测到 RTL8156B 网卡"
 fi
 
 exit 0
 EOF
 
 chmod +x files/etc/uci-defaults/99-rtl8156b-setup
+echo "✅ RTL8156B 自动配置脚本已添加"
 
 # ===========================================
 # 7. 添加 USB 网卡驱动提示
 # ===========================================
-cat > files/root/README-USB-NIC.txt <<EOF
+cat > files/root/README-USB-NIC.txt <<'EOF'
 ===========================================
  升腾 C92 USB 网卡使用说明
 ===========================================
@@ -216,12 +253,13 @@ cat > files/root/README-USB-NIC.txt <<EOF
 ===========================================
 EOF
 
+echo "✅ USB 网卡说明已添加"
+
 # ===========================================
 # 8. 添加系统优化
 # ===========================================
 echo "⚙️ 添加系统优化配置..."
 
-mkdir -p files/etc/sysctl.d
 cat > files/etc/sysctl.d/99-network-optimize.conf <<EOF
 # 网络优化
 net.core.rmem_default = 262144
@@ -234,8 +272,15 @@ net.ipv4.tcp_congestion_control = bbr
 net.core.default_qdisc = fq
 EOF
 
+echo "✅ 系统优化配置完成"
+
 # ===========================================
-# 9. 完成
+# 9. 返回上级目录
+# ===========================================
+cd "$WORKSPACE" || true
+
+# ===========================================
+# 10. 完成
 # ===========================================
 echo "========================================="
 echo "✅ j1800-new.sh 执行完成!"
