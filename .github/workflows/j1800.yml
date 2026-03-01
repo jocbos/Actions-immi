@@ -16,7 +16,7 @@ on:
 
 env:
   CONFIG_FILE: 'config/j1800.config'
-  DIY_SCRIPT: new.sh
+  DIY_SCRIPT: j1800-new.sh
   REPO_URL: https://github.com/bingoguo93/immortalwrt
   REPO_BRANCH: openwrt-25.12
   TZ: Asia/Shanghai
@@ -105,11 +105,11 @@ jobs:
         # 安装 feeds
         ./scripts/feeds install -a
 
-    - name: 运行post-feeds脚本
+    - name: 运行j1800-post-feeds脚本
       working-directory: ./openwrt
       run: |
-        chmod +x $GITHUB_WORKSPACE/post-feeds.sh
-        $GITHUB_WORKSPACE/post-feeds.sh
+        chmod +x $GITHUB_WORKSPACE/j1800-post-feeds.sh
+        $GITHUB_WORKSPACE/j1800-post-feeds.sh
 
     - name: 应用配置
       run: |
