@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for J1800
+name: Build ImmortalWrt for J1800 （qb版）
 
 on:
   workflow_dispatch:
