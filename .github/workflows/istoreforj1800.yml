@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for J1800 （istore版）
+name: Build ImmortalWrt for J1800 (istore版)
 
 on:
   workflow_dispatch:
@@ -81,18 +81,19 @@ jobs:
           parted \
           dosfstools
         echo "✅ 所有依赖安装完成"
-  - name: 升级 CMake 到最新版
-  run: |
-    # 移除旧版 CMake
-    sudo apt remove --purge -y cmake cmake-data
-    # 下载最新 CMake
-    wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz
-    tar -xzf cmake-3.31.6-linux-x86_64.tar.gz
-    sudo mv cmake-3.31.6-linux-x86_64 /opt/cmake
-    # 添加到 PATH
-    sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
-    # 验证版本
-    cmake --version
+
+    - name: 升级 CMake 到最新版
+      run: |
+        # 移除旧版 CMake
+        sudo apt remove --purge -y cmake cmake-data
+        # 下载最新 CMake
+        wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz
+        tar -xzf cmake-3.31.6-linux-x86_64.tar.gz
+        sudo mv cmake-3.31.6-linux-x86_64 /opt/cmake
+        # 添加到 PATH
+        sudo ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
+        # 验证版本
+        cmake --version
 
     - name: 克隆源码
       run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
