@@ -46,7 +46,7 @@ PACKAGES=(
     "zerotier"
     "luci-app-zerotier"
     "luci-app-upnp"
-    "miniupnpd-nftables"
+    "miniupnpd-iptables
     "ksmbd-server"
     "luci-app-ksmbd"
     "luci-app-diskman"
