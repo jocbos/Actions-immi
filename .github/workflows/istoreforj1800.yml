@@ -19,7 +19,7 @@ env:
   DIY_SCRIPT: 'j1800-new.sh'
   POST_FEEDS_SCRIPT: 'j1800-post-feeds-istote.sh'
   REPO_URL: https://github.com/istoreos/istoreos
-  REPO_BRANCH: master
+  REPO_BRANCH: istoreos-24.10
   TZ: Asia/Shanghai
   UPLOAD_RELEASE: true
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
