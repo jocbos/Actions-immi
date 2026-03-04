@@ -41,7 +41,7 @@ CORE_PACKAGES=(
     "luci-app-smartdns"
     "zerotier"
     "luci-app-zerotier"
-    "luci-app-homeproxy"
+    "luci-app-passwall"
     "sing-box"
     "v2ray-geodata"
     
