@@ -17,7 +17,7 @@ on:
 env:
   CONFIG_FILE: 'config/istoteforj1800.config'
   DIY_SCRIPT: 'j1800-new.sh'
-  POST_FEEDS_SCRIPT: 'j1800-post-feeds-istote.sh'
+  POST_FEEDS_SCRIPT: 'j1800-post-feeds-istore.sh'
   REPO_URL: https://github.com/istoreos/istoreos
   REPO_BRANCH: istoreos-24.10
   TZ: Asia/Shanghai
