@@ -41,9 +41,7 @@ CORE_PACKAGES=(
     "luci-app-smartdns"
     "zerotier"
     "luci-app-zerotier"
-    "luci-app-passwall"
-    "sing-box"
-    "v2ray-geodata"
+    
     
     # UPnP
     "luci-app-upnp"
