@@ -1,4 +1,4 @@
-name: Build XG-040G-MD 新版firewall
+name: Build XG-040G-MD 含istore
 
 on:
   workflow_dispatch:
